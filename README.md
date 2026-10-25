@@ -42,3 +42,6 @@ A save keeps a Global Object System by its name and each record by its saved fie
 library takes a mod's class-name prefix and system name rather than choosing its own.
 
 This repository has no tests of its own; the mods that use it are the test (`AGENTS.md`).
+
+Versions follow semantic versioning, MAJOR.MINOR.PATCH, and `CHANGELOG.md` says what each one
+changes for a mod that calls the library.

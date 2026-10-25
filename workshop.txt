@@ -1,0 +1,9 @@
+version=1
+title=cf_commonlib
+description=Shared code for Caleb Fenton's Build 42 mods, Renewable Energy and Enhanced Irrigation.
+description=
+description=This is a dependency: the mods that need it list it as a required item, and Steam subscribes you to it with them. It adds nothing to the game by itself: no items, recipes, tiles, options or translations.
+description=
+description=Source and module list for modders: https://github.com/CalebFenton/PZ_cf_commonlib
+tags=Build 42;Framework
+visibility=public

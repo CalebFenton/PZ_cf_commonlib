@@ -62,10 +62,10 @@ local function line(need)
     return " " .. counted(need) .. " <LINE>"
 end
 
--- The tooltip under what the option does (Needs.describe), if anything says.
+-- Sets `option`'s tooltip to `text`, under what the option does when Needs.describe said it.
 local function setTooltip(option, text)
     local about = option.about
-    option.toolTip = ISWorldObjectContextMenu.addToolTip()
+    option.toolTip = option.toolTip or ISWorldObjectContextMenu.addToolTip()
     option.toolTip.description = about and text and (about .. " <LINE> <LINE> " .. text) or about or text
 end
 

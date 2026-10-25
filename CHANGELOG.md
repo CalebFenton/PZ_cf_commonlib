@@ -3,6 +3,11 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
+## 0.2.1
+
+- `Needs.show` and `Needs.refuse` after `Needs.describe` reuse the option's tooltip instead of
+  taking a second one from the game's tooltip pool.
+
 ## 0.2.0
 
 - `Jobs`: a row's optional `tooltip`, the translation key of what the job does. `JobOptions.add`

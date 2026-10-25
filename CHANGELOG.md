@@ -3,6 +3,12 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
+## 0.1.1
+
+- `Needs.show`: a need any of several meets keeps a space on both sides of the "or" between
+  them; the tooltip ran the words together, as the game's rich text drops the space before a
+  colour tag.
+
 ## 0.1.0
 
 The first version: the code Renewable Energy and Enhanced Irrigation had each carried, merged.

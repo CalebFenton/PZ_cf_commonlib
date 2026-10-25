@@ -8,11 +8,12 @@ local Needs = require "cf_commonlib/Needs"
 local JobOptions = {}
 
 --- Adds to `menu` the option `label` that queues `feature`'s `job` of the action class `Action`
---- (JobAction.forFeatures) at `target` with `with`: greyed out saying it's too dark for a job that
---- needs light (Action.TOO_DARK), else with the target's state when that refuses it, else with
---- the needs listed when the character lacks any, else with what is wrong with `with`. A job its
---- target's state refuses that belongs to another state of it (hideBlocked) is left out, as is one
---- at a target this side can't read. Returns the option, or nil when left out.
+--- (JobAction.forFeatures) at `target` with `with`, its tooltip headed by what the job does (its
+--- row's tooltip): greyed out saying it's too dark for a job that needs light (Action.TOO_DARK),
+--- else with the target's state when that refuses it, else with the needs listed when the
+--- character lacks any, else with what is wrong with `with`. A job its target's state refuses that
+--- belongs to another state of it (hideBlocked) is left out, as is one at a target this side can't
+--- read. Returns the option, or nil when left out.
 function JobOptions.add(menu, playerNum, Action, feature, job, target, with, label)
     local jobs = Action.jobsOf(feature)
     local subject = jobs.subjectOf(target)
@@ -27,6 +28,9 @@ function JobOptions.add(menu, playerNum, Action, feature, job, target, with, lab
     end
     blocker = Needs.tooDark(character, jobs.needsLight(job), Action.TOO_DARK) or blocker
     local option = menu:addOption(label, playerNum, Action.queue, feature, job, target, with)
+    if row and row.tooltip then
+        Needs.describe(option, row.tooltip)
+    end
     Needs.show(option, jobs.needs(character, job, subject, with), blocker)
     Needs.refuse(option, not option.notAvailable and jobs.withRefusal(character, job, subject, with))
     return option

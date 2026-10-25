@@ -11,6 +11,8 @@
 -- - materials: what it takes of the character (Materials), or a function(character, subject,
 --   with) of them, which must answer for any subject, refused or not; absent when it takes nothing.
 -- - xp: { perk = "Name", amount }, what it teaches once done.
+-- - tooltip: the translation key of a sentence saying what the job does, which heads its option's
+--   tooltip (JobOptions), as a crafting recipe's Tooltip does.
 -- - light: it needs light to see by. Only the player's own side can tell (IsoPlayer.tooDarkToRead
 --   is false for a remote player), so the menu and the action's isValid check it, not refusal.
 -- `subject` is what the rows read of the target worked at (the module's subjectOf), and `with` is

@@ -1,6 +1,6 @@
 id=cf_commonlib
 name=cf_commonlib
-modversion=0.1.1
+modversion=0.2.0
 description=Shared code for Caleb Fenton's mods (Renewable Energy, Enhanced Irrigation): world objects that keep running while unloaded, jobs with menus that say what is missing, recipes learned by skill level on both sides of a server, and loot-table entries. Adds nothing by itself.
 poster=poster.png
 icon=cf_commonlib_icon.png

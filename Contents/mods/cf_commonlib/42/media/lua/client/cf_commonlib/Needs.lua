@@ -62,9 +62,18 @@ local function line(need)
     return " " .. counted(need) .. " <LINE>"
 end
 
-local function setTooltip(option, description)
+-- The tooltip under what the option does (Needs.describe), if anything says.
+local function setTooltip(option, text)
+    local about = option.about
     option.toolTip = ISWorldObjectContextMenu.addToolTip()
-    option.toolTip.description = description
+    option.toolTip.description = about and text and (about .. " <LINE> <LINE> " .. text) or about or text
+end
+
+--- Heads `option`'s tooltip with what it does, the sentence of the translation key `key`, as
+--- vanilla's crafting recipes say above what they take; a refusal or needs shown later go under it.
+function Needs.describe(option, key)
+    option.about = getText(key)
+    setTooltip(option, nil)
 end
 
 --- Greys `option` out with the sentence of the translation key `key` (`...` its arguments). Does
@@ -88,7 +97,7 @@ end
 --- An option whose job takes several things (skill, tools, materials) lists them all with have and
 --- need, so the character sees everything they lack at once, and is greyed out while any is short.
 --- A `blocker` (a translation key) that no amount of carrying fixes replaces the list with its
---- sentence. A job that takes nothing gets no tooltip.
+--- sentence.
 function Needs.show(option, needs, blocker)
     if blocker then
         Needs.refuse(option, blocker)

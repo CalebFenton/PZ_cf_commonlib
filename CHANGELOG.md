@@ -3,6 +3,30 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
+## 0.3.0
+
+Breaking:
+
+- `JobAction.forFeatures`: `canPerform` and `complete` also check `keeps` (the target is still
+  the feature's kind, an item `with` still carried), so a job whose target or item went away
+  stops instead of completing.
+- `JobAction.forFeatures`: `Action.queue`'s fourth argument is the target, which may be a
+  vehicle (see `area`).
+
+Added:
+
+- `JobAction.forFeatures`: `Action.completeJob(character, feature, job, target, with)` does a
+  job as the action's `complete` does; a feature's `reach`; row `units` (action units, in place
+  of `minutes`), `wield` (`with` is the tool kept in the primary hand), `inTarget` (`with` lies in
+  the target's container) and `area(vehicle, with)` (the job is at a vehicle's area).
+- `JobAction:reach()`, which `atJob` uses.
+- `Jobs.define`: `short` is optional; without it an unmet need refuses with its kind. A row may
+  give `needs(character, subject, with)` in place of `materials`.
+- `JobOptions.add`: the label defaults to the action's label key. `JobOptions.onWorldMenu`
+  returns the handler it registers.
+- `Items.ofType`, `Items.toolFor(character, isTool)`, `Tables.fromList(list, keep, into)`.
+- `Squares.onSquare` counts a vehicle as present until it leaves the world.
+
 ## 0.2.1
 
 - `Needs.show` and `Needs.refuse` after `Needs.describe` reuse the option's tooltip instead of

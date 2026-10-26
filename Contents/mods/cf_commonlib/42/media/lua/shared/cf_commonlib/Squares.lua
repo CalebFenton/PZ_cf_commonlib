@@ -15,8 +15,11 @@ function Squares.findObjectOn(square, matches)
 end
 
 --- Whether `object` is still in the world, rather than a copy left behind by a removal or a
---- chunk reload.
+--- chunk reload. A vehicle is on no square's object list, so it counts until it leaves the world.
 function Squares.onSquare(object)
+    if instanceof(object, "BaseVehicle") then
+        return not object:isRemovedFromWorld()
+    end
     return object ~= nil and object:getObjectIndex() ~= -1
 end
 

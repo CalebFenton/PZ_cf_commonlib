@@ -10,9 +10,24 @@ function Items.notBroken(item)
     return not item:isBroken()
 end
 
+--- A test of whether an item is of `fullType`, for what takes one (Jobs.carries, Tables.fromList).
+function Items.ofType(fullType)
+    return function(item) return item:getFullType() == fullType end
+end
+
 --- The first working tool with `tag` (an ItemTag value) `character` carries, bags included, or nil.
 function Items.workingTool(character, tag)
     return character:getInventory():getFirstTagEvalRecurse(tag, Items.notBroken)
+end
+
+--- The tool of those `isTool(item)` accepts that `character` would work with: the one in their
+--- primary hand, else the first they carry, bags included; nil when they carry none.
+function Items.toolFor(character, isTool)
+    local held = character:getPrimaryHandItem()
+    if held and isTool(held) then
+        return held
+    end
+    return character:getInventory():getFirstEvalRecurse(isTool)
 end
 
 --- Takes `item` out of the container that holds it, if any, and tells the clients. Authority only.

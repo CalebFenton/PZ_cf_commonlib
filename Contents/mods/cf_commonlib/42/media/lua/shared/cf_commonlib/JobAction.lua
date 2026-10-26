@@ -4,7 +4,8 @@
 -- reads the parameter names off the class's own `new`, so each job class is a global the mod
 -- names, derived as `X = X or JobAction:derive("X")` so a reloaded file keeps the class the
 -- queue's actions hold, with a `new` of its own (JobAction.forFeatures gives one). A class gives:
--- - REACH: how far from the middle of the target's square, on each axis, the character may work.
+-- - REACH: how far from the middle of the target's square, on each axis, the character may work,
+--   unless reach() says otherwise.
 -- - TOO_DARK: the translation key a job that needs light (its row's `light`) shows in the dark.
 -- - target(): the object or vehicle worked at.
 -- - row(): the job's row: `light`; `metabolics`, the exertion it keeps the character at; how it
@@ -36,7 +37,11 @@ end
 --- Whether the character stands where the menu would have walked them for the job
 --- (Squares.withinReach).
 function JobAction:atJob()
-    return Squares.withinReach(self.character, self:target(), self.REACH)
+    return Squares.withinReach(self.character, self:target(), self:reach())
+end
+
+function JobAction:reach()
+    return self.REACH
 end
 
 --- Whether the authority may take the character as at the job. The server never calls isValid()
@@ -145,17 +150,24 @@ local function isItem(with)
 end
 
 --- Makes the job class `Action` (a JobAction) the action of every job of several features, each a
---- job module (Jobs.define) of jobs at one kind of object. `FEATURES[feature]`: isTarget(object),
---- the objects it works at; jobs, its job module; site(), its side of the jobs on the authority
---- (Jobs.perform), looked up when a job completes, since server files load after shared ones. A
---- row's `minutes` is a number or a function(object, with, character) of them, and its `equip`,
---- if any, a function(character, object, with) of the tool to hold for the job: an item, or a
---- predicate the first carried match of which is held. Gives Action:
+--- job module (Jobs.define) of jobs at one kind of object or vehicle. `FEATURES[feature]`:
+--- isTarget(target), the objects or vehicles it works at; jobs, its job module; site(), its side
+--- of the jobs on the authority (Jobs.perform), looked up when a job completes, since server files
+--- load after shared ones; reach, if any, its own in place of the class's REACH. A row's length is
+--- `minutes` of game time or `units`, action units as vanilla times its own jobs: a number, or a
+--- function(target, with, character) of one. A `with` that is an inventory item is carried, or
+--- with the row's `inTarget` in the target's container. A row's `wield`: `with` is the tool, held
+--- in the primary hand for the whole job; its `equip`, if any, a function(character, target, with)
+--- of another tool to hold: an item, or a predicate the first carried match of which is held. At a
+--- vehicle, the row's `area(vehicle, with)` names the vehicle area the job is done from. Gives
+--- Action:
 --- - jobsOf(feature), the job module of `feature`;
---- - new(character, feature, job, object, with), nil for a feature or job there is none of: those
+--- - new(character, feature, job, target, with), nil for a feature or job there is none of: those
 ---   come from the client, every later step looks them up, and the server turns down a request
 ---   whose new() gives no action (NetTimedActionPacket.processServer);
---- - queue(playerNum, feature, job, object, with), which walks the character over, keeping their
+--- - completeJob(character, feature, job, target, with), the job done on the authority as complete()
+---   does it once the character is found at it (Jobs.perform); returns whether it was done;
+--- - queue(playerNum, feature, job, target, with), which walks the character over, keeping their
 ---   queue, and queues the job there holding its tool. Client only;
 --- and the methods JobAction asks for, with complete(), which does the job.
 function JobAction.forFeatures(Action, FEATURES)
@@ -173,41 +185,66 @@ function JobAction.forFeatures(Action, FEATURES)
     end
 
     function Action:units()
-        local minutes = self:row().minutes
-        if type(minutes) == "function" then
-            minutes = minutes(self.object, self.with, self.character)
+        local row = self:row()
+        local length = row.units or row.minutes
+        if type(length) == "function" then
+            length = length(self.object, self.with, self.character)
         end
-        return minutes * Clock.unitsPerMinute()
+        return row.units and length or length * Clock.unitsPerMinute()
     end
 
     function Action:target()
         return self.object
     end
 
+    function Action:reach()
+        return FEATURES[self.feature].reach or self.REACH
+    end
+
+    -- The container an item `with` is kept in: the target's for a row with inTarget, else the
+    -- character's inventory; nil for a `with` that is no item, or a target without its container.
+    local function holderOf(self)
+        if not isItem(self.with) then
+            return nil
+        elseif self:row().inTarget then
+            return self.object:getContainer()
+        end
+        return self.character:getInventory()
+    end
+
     function Action:keeps()
         if not (Squares.onSquare(self.object) and FEATURES[self.feature].isTarget(self.object)) then
             return false
+        elseif not isItem(self.with) then
+            return not self:row().wield
         end
-        return not isItem(self.with) or self.character:getInventory():containsRecursive(self.with)
+        local holder = holderOf(self)
+        return holder ~= nil and holder:containsRecursive(self.with)
+            and (not self:row().wield or self.character:isPrimaryHandItem(self.with))
     end
 
     function Action:canPerform()
-        return not FEATURES[self.feature].jobs.refusal(self.character, self.job, self.object, self.with)
+        return self:keeps() and not FEATURES[self.feature].jobs.refusal(self.character, self.job, self.object, self.with)
     end
 
     function Action:findItems()
-        if isItem(self.with) then
-            self.with = self.character:getInventory():getItemWithIDRecursiv(self.with:getID())
+        local holder = holderOf(self)
+        if holder then
+            self.with = holder:getItemWithIDRecursiv(self.with:getID())
         end
+    end
+
+    function Action.completeJob(character, feature, job, target, with)
+        local entry = FEATURES[feature]
+        return Jobs.perform(entry.jobs, entry.site(), character, job, target, with)
     end
 
     -- The job's own rules are rechecked by Jobs.perform, after it catches the target up.
     function Action:complete()
-        if not (Squares.onSquare(self.object) and self:atJobForAuthority()) then
+        if not (self:keeps() and self:atJobForAuthority()) then
             return false
         end
-        local feature = FEATURES[self.feature]
-        return Jobs.perform(feature.jobs, feature.site(), self.character, self.job, self.object, self.with)
+        return Action.completeJob(self.character, self.feature, self.job, self.object, self.with)
     end
 
     -- Parameter names match the fields: the multiplayer server rebuilds the action by passing them
@@ -225,17 +262,20 @@ function JobAction.forFeatures(Action, FEATURES)
         return o
     end
 
-    function Action.queue(playerNum, feature, job, object, with)
-        local character = Squares.walkTo(playerNum, object:getSquare())
-        if not character then
+    function Action.queue(playerNum, feature, job, target, with)
+        local row = rowOf(feature, job)
+        local character = getSpecificPlayer(playerNum)
+        if instanceof(target, "BaseVehicle") then
+            ISTimedActionQueue.add(ISPathFindAction:pathToVehicleArea(character, target, row.area(target, with)))
+        elseif not Squares.walkTo(playerNum, target:getSquare()) then
             return
         end
-        local equip = rowOf(feature, job).equip
-        local tool = equip and equip(character, object, with)
+        local tool = row.wield and with or row.equip and row.equip(character, target, with)
         if tool then
-            ISWorldObjectContextMenu.equip(character, character:getPrimaryHandItem(), tool, true, false)
+            local twoHands = type(tool) ~= "function" and instanceof(tool, "HandWeapon") and tool:isTwoHandWeapon()
+            ISWorldObjectContextMenu.equip(character, character:getPrimaryHandItem(), tool, true, twoHands)
         end
-        ISTimedActionQueue.add(Action:new(character, feature, job, object, with))
+        ISTimedActionQueue.add(Action:new(character, feature, job, target, with))
     end
 end
 

@@ -10,6 +10,8 @@
 --   brings, checked after the needs in a menu so it shows only once they are met.
 -- - materials: what it takes of the character (Materials), or a function(character, subject,
 --   with) of them, which must answer for any subject, refused or not; absent when it takes nothing.
+--   needs(character, subject, with), in its place, gives the needs themselves for what no
+--   materials list says, such as a crafting recipe's inputs; the site's act then takes them.
 -- - xp: { perk = "Name", amount }, what it teaches once done.
 -- - tooltip: the translation key of a sentence saying what the job does, which heads its option's
 --   tooltip (JobOptions), as a crafting recipe's Tooltip does.
@@ -29,20 +31,19 @@ function Jobs.carries(character, item, isKind)
         and character:getInventory():containsRecursive(item)
 end
 
---- Why a job is refused: `blocker` (a translation key) if any, else `short` while any of `needs` is
---- unmet, else nil.
+--- Why a job is refused: `blocker` (a translation key) if any, else, while any of `needs` is unmet,
+--- `short`, or without it the kind of the first unmet need (Materials.unmetKind), else nil.
 function Jobs.refusalOf(blocker, needs, short)
-    if blocker then
-        return blocker
-    end
-    return Materials.firstUnmet(needs) and short or nil
+    local unmet = not blocker and Materials.firstUnmet(needs)
+    return blocker or unmet and (short or unmet.kind) or nil
 end
 
 --- Gives the job module `Module` its functions, each also taking the `character`, the `job`, the
 --- target's subject and `with`: Module.materials, needs, blocker, withRefusal and refusalAt;
 --- Module.needsLight(job); Module.subjectOf(target); and Module.refusal(character, job, target,
 --- with), which reads the subject itself. `spec`:
---- - short: the refusal while a need is unmet (a translation key the mod defines);
+--- - short, if any: the refusal while a need is unmet (a translation key the mod defines), in
+---   place of the unmet need's kind;
 --- - unknown: the refusal of a job no row has, which only a client that made one up asks for;
 --- - subjectOf(target), if the rows read something other than the target itself: what they read
 ---   of it, or nil when there is none to work at, which `missing` refuses.
@@ -63,6 +64,10 @@ function Jobs.define(Module, spec)
     end
 
     function Module.needs(character, job, subject, with)
+        local row = Module.JOBS[job]
+        if row and row.needs then
+            return row.needs(character, subject, with)
+        end
         return Materials.needs(character, Module.materials(character, job, subject, with))
     end
 
@@ -84,13 +89,11 @@ function Jobs.define(Module, spec)
         return row and row.withRefusal and row.withRefusal(character, subject, with) or nil
     end
 
-    --- What refuses the job at `subject`: a blocker first, then what is wrong with `with`, then
-    --- `short` for the first unmet need.
+    --- What refuses the job at `subject`: a blocker first, then what is wrong with `with`, then the
+    --- first unmet need (Jobs.refusalOf).
     function Module.refusalAt(character, job, subject, with)
-        return Module.blocker(character, job, subject, with)
-            or Module.withRefusal(character, job, subject, with)
-            or (Materials.firstUnmet(Module.needs(character, job, subject, with)) and spec.short)
-            or nil
+        return Module.blocker(character, job, subject, with) or Module.withRefusal(character, job, subject, with)
+            or Jobs.refusalOf(nil, Module.needs(character, job, subject, with), spec.short)
     end
 
     --- What refuses `character` doing `job` at `target` with `with`, as this side knows it now.

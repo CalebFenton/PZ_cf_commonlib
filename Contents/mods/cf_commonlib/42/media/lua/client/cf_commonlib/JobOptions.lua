@@ -7,13 +7,14 @@ local Needs = require "cf_commonlib/Needs"
 
 local JobOptions = {}
 
---- Adds to `menu` the option `label` that queues `feature`'s `job` of the action class `Action`
---- (JobAction.forFeatures) at `target` with `with`, its tooltip headed by what the job does (its
---- row's tooltip): greyed out saying it's too dark for a job that needs light (Action.TOO_DARK),
---- else with the target's state when that refuses it, else with the needs listed when the
---- character lacks any, else with what is wrong with `with`. A job its target's state refuses that
---- belongs to another state of it (hideBlocked) is left out, as is one at a target this side can't
---- read. Returns the option, or nil when left out.
+--- Adds to `menu` the option `label` (without one, the text of the class's Action.labelKey(job))
+--- that queues `feature`'s `job` of the action class `Action` (JobAction.forFeatures) at `target`
+--- with `with`, its tooltip headed by what the job does (its row's tooltip): greyed out saying it's
+--- too dark for a job that needs light (Action.TOO_DARK), else with the target's state when that
+--- refuses it, else with the needs listed when the character lacks any, else with what is wrong
+--- with `with`. A job its target's state refuses that belongs to another state of it
+--- (hideBlocked) is left out, as is one at a target this side can't read. Returns the option, or
+--- nil when left out.
 function JobOptions.add(menu, playerNum, Action, feature, job, target, with, label)
     local jobs = Action.jobsOf(feature)
     local subject = jobs.subjectOf(target)
@@ -27,7 +28,8 @@ function JobOptions.add(menu, playerNum, Action, feature, job, target, with, lab
         return nil
     end
     blocker = Needs.tooDark(character, jobs.needsLight(job), Action.TOO_DARK) or blocker
-    local option = menu:addOption(label, playerNum, Action.queue, feature, job, target, with)
+    local text = label or getText(Action.labelKey(job))
+    local option = menu:addOption(text, playerNum, Action.queue, feature, job, target, with)
     if row and row.tooltip then
         Needs.describe(option, row.tooltip)
     end
@@ -69,16 +71,19 @@ end
 
 --- Fills the world's right-click menu for the first clicked object `isObject(object)` accepts:
 --- `fill(context, playerNum, character, object, worldobjects)`. Nothing for a character in a
---- vehicle; the game's test pass only learns there is something.
+--- vehicle; the game's test pass only learns there is something. Returns the handler it adds to
+--- OnFillWorldObjectContextMenu, for a test to call as the game does.
 function JobOptions.onWorldMenu(isObject, fill)
-    Events.OnFillWorldObjectContextMenu.Add(function(playerNum, context, worldobjects, test)
+    local function onFill(playerNum, context, worldobjects, test)
         local character = getSpecificPlayer(playerNum)
         if not character or character:getVehicle() then return end
         local object = Needs.findClicked(worldobjects, isObject)
         if not object then return end
         if test then return ISWorldObjectContextMenu.setTest() end
         fill(context, playerNum, character, object, worldobjects)
-    end)
+    end
+    Events.OnFillWorldObjectContextMenu.Add(onFill)
+    return onFill
 end
 
 --- The function choosing `option` calls, as a menu finds vanilla's own options: a get-up option

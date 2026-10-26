@@ -1,4 +1,4 @@
--- Comparing plain Lua values.
+-- Comparing plain Lua values, and copying Java lists into them.
 
 local Tables = {}
 
@@ -19,6 +19,19 @@ function Tables.sameValue(a, b)
         end
     end
     return true
+end
+
+--- Appends to `into` (a new table when nil) each value of the Java list `list` that `keep(value)`
+--- passes, or every value without `keep`, in the list's order, and returns `into`.
+function Tables.fromList(list, keep, into)
+    into = into or {}
+    for i = 0, list:size() - 1 do
+        local value = list:get(i)
+        if not keep or keep(value) then
+            table.insert(into, value)
+        end
+    end
+    return into
 end
 
 return Tables

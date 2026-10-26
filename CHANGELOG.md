@@ -3,6 +3,14 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
+## 0.3.1
+
+- `Materials`: water in carried bags, including nested bags, counts toward a job and is consumed
+  fullest first alongside main-inventory water. Tainted water remains excluded.
+- `Materials.needs` counts water and drainable uses without sorting; consumption and equipment
+  retain fullest-first selection. Java-list copying reuses `Tables.fromList`.
+- `JobOptions.add` skips material counting when a blocker or darkness already refuses the job.
+
 ## 0.3.0
 
 Breaking:

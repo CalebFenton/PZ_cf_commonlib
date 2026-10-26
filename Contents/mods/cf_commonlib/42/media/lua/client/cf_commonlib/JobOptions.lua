@@ -33,7 +33,7 @@ function JobOptions.add(menu, playerNum, Action, feature, job, target, with, lab
     if row and row.tooltip then
         Needs.describe(option, row.tooltip)
     end
-    Needs.show(option, jobs.needs(character, job, subject, with), blocker)
+    Needs.show(option, not blocker and jobs.needs(character, job, subject, with), blocker)
     Needs.refuse(option, not option.notAvailable and jobs.withRefusal(character, job, subject, with))
     return option
 end

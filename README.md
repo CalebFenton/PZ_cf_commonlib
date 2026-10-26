@@ -41,6 +41,10 @@ translation keys or commands; a mod passes those in. Every function's doc commen
 A save keeps a Global Object System by its name and each record by its saved fields, so the
 library takes a mod's class-name prefix and system name rather than choosing its own.
 
+Material needs count carried items and clean water through nested bags. Counting does not order
+water or drainables; consuming them (or equipping a drainable) still chooses the fullest first.
+Blocked job options show their refusal without scanning materials the tooltip won't display.
+
 This repository has no tests of its own; the mods that use it are the test (`AGENTS.md`).
 
 Versions follow semantic versioning, MAJOR.MINOR.PATCH, and `CHANGELOG.md` says what each one

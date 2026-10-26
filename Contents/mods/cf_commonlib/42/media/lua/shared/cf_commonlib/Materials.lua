@@ -24,6 +24,7 @@
 -- suffices), which the menus name too.
 
 local Items = require "cf_commonlib/Items"
+local Tables = require "cf_commonlib/Tables"
 
 local Materials = {}
 
@@ -39,8 +40,8 @@ local function addDrainables(list, seen, items)
 end
 
 -- The drainables the material `material` names that the character carries, unbroken and not used
--- up, fullest first: the order consume draws on them.
-local function drainablesOf(character, material)
+-- up; ordered only when a job draws on or equips them, not when a menu counts them.
+local function drainablesOf(character, material, ordered)
     local list, seen = {}, {}
     local inventory = character:getInventory()
     for _, tag in ipairs(material.tags or {}) do
@@ -49,20 +50,30 @@ local function drainablesOf(character, material)
     for _, fullType in ipairs(material.types or { material.item }) do
         addDrainables(list, seen, inventory:getAllTypeRecurse(fullType))
     end
-    table.sort(list, function(a, b) return a:getCurrentUses() > b:getCurrentUses() end)
+    if ordered then
+        table.sort(list, function(a, b) return a:getCurrentUses() > b:getCurrentUses() end)
+    end
     return list
 end
 
--- The containers of water the character carries, most first.
-local function waterSources(character)
-    local list = {}
-    local sources = character:getInventory():getAllWaterFluidSources(false)
-    for i = 0, sources:size() - 1 do
-        table.insert(list, sources:get(i))
+local function isBag(item)
+    return instanceof(item, "InventoryContainer")
+end
+
+-- Keep the game's clean/carbonated-water policy, but include every carried bag: the native
+-- water-source query, unlike the other material queries, doesn't recurse.
+local function waterSources(character, ordered)
+    local inventory = character:getInventory()
+    local list = Tables.fromList(inventory:getAllWaterFluidSources(false))
+    local bags = inventory:getAllEvalRecurse(isBag)
+    for i = 0, bags:size() - 1 do
+        Tables.fromList(bags:get(i):getInventory():getAllWaterFluidSources(false), nil, list)
     end
-    table.sort(list, function(a, b)
-        return a:getFluidContainer():getAmount() > b:getFluidContainer():getAmount()
-    end)
+    if ordered then
+        table.sort(list, function(a, b)
+            return a:getFluidContainer():getAmount() > b:getFluidContainer():getAmount()
+        end)
+    end
     return list
 end
 
@@ -79,11 +90,8 @@ local function itemsTaken(inventory, material)
         if left <= 0 then
             break
         end
-        local items = inventory:getSomeTypeRecurse(fullType, left)
-        for i = 0, items:size() - 1 do
-            table.insert(taken, items:get(i))
-        end
-        left = left - items:size()
+        Tables.fromList(inventory:getSomeTypeRecurse(fullType, left), nil, taken)
+        left = (material.need or 1) - #taken
     end
     return taken
 end
@@ -98,18 +106,13 @@ local function haveOf(character, material)
         return Items.workingTool(character, ItemTag[material.tool]) and 1 or 0
     elseif material.tag then
         return inventory:getCountTagEvalRecurse(ItemTag[material.tag], Items.notBroken)
-    elseif material.water then
-        local litres = 0
-        for _, item in ipairs(waterSources(character)) do
-            litres = litres + item:getFluidContainer():getAmount()
+    elseif material.water or material.uses then
+        local have = 0
+        local sources = material.water and waterSources(character) or drainablesOf(character, material)
+        for _, item in ipairs(sources) do
+            have = have + (material.water and item:getFluidContainer():getAmount() or item:getCurrentUses())
         end
-        return math.floor(litres * 10) / 10
-    elseif material.uses then
-        local uses = 0
-        for _, item in ipairs(drainablesOf(character, material)) do
-            uses = uses + item:getCurrentUses()
-        end
-        return uses
+        return material.water and math.floor(have * 10) / 10 or have
     end
     local have = 0
     for _, fullType in ipairs(material.types or { material.item }) do
@@ -183,7 +186,7 @@ end
 
 local function pourWater(character, litres)
     local left = litres
-    for _, item in ipairs(waterSources(character)) do
+    for _, item in ipairs(waterSources(character, true)) do
         local fluid = item:getFluidContainer()
         local take = math.min(left, fluid:getAmount())
         if take > 0 then
@@ -199,7 +202,7 @@ end
 
 local function useDrainables(character, material)
     local left = material.uses
-    for _, item in ipairs(drainablesOf(character, material)) do
+    for _, item in ipairs(drainablesOf(character, material, true)) do
         while left > 0 and item:getCurrentUses() > 0 do
             item:UseAndSync()
             left = left - 1
@@ -248,7 +251,7 @@ end
 --- one consume draws on first.
 function Materials.holdsDrainable(drainable)
     return function(character)
-        return drainablesOf(character, drainable)[1]
+        return drainablesOf(character, drainable, true)[1]
     end
 end
 

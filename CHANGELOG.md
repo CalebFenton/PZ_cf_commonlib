@@ -3,7 +3,7 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
-## Unreleased
+## 0.4.0
 
 - `GlobalObjects.declare(owner, { prefix, name, isObject, sprites, decorate?, accept? })` replaces
   `addAccessors`: a feature's identity is declared once, as `owner.feature`, and read by

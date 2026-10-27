@@ -54,6 +54,18 @@ What each version changes for a mod that calls the library. Versions follow sema
 - `OpenAction.show(windows, playerNum, window)` and `OpenAction.close(windows, playerNum, window)`:
   one window of a family per player, with the controller's focus while open.
 - `Materials.unmetKind` removed.
+- `Materials`: a `{ craft = name, twins?, except? }` material is a craftRecipe done in place: its
+  needs are the recipe known, its skills and its inputs (twin recipes differing in one input are
+  one `anyOf` need); `consume` pays the inputs as the craft does (scaled drainables across items,
+  MayDegrade wear on kept tools) and teaches the recipe's XP. A job row's `needs` function is gone:
+  rows give `materials` only, and `Jobs.perform` pays a craft on success.
+- `Items.conditionMaxOf(fullType)`: an item type's script ConditionMax, cached.
+- `Tiles.addToWorld(square, isoObject, { index?, beforeSend?, afterSend?, announce? })`: adds an
+  object made in code to the square and publishes it (send to clients, then OnObjectAdded).
+- `VehicleParts` (new, shared): `VehicleParts.isOpen(vehicle, partId)`, whether a door part leaves
+  what it covers open.
+- `GeneratorReach.release(x, y, z)`: lets this side's chunks go of the squares a running generator
+  there powered, for a client whose copy left before the server's switch-off reached it.
 
 ## 0.3.1
 

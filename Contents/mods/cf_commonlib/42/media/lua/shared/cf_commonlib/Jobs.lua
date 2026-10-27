@@ -11,10 +11,9 @@
 --   spec's unknown without one) refuses it. withOptional: the job may also be done with none.
 -- - withRefusal(character, subject, with), if any: what else refuses `with`, asked once it passed
 --   the row's `with`.
--- - materials: what it takes of the character (Materials), or a function(character, subject,
---   with) of them, which must answer for any subject, refused or not; absent when it takes nothing.
---   needs(character, subject, with), in its place, gives the needs themselves for what no
---   materials list says, such as a crafting recipe's inputs; the site's act then takes them.
+-- - materials: what it takes of the character (Materials, a craft done in place included), or a
+--   function(character, subject, with) of them, which must answer for any subject, refused or not;
+--   absent when it takes nothing.
 -- - xp: { perk = "Name", amount }, what it teaches once done.
 -- - label: the translation key of the job's name in a menu, where the action's labelKey(job)
 --   doesn't give it (JobOptions).
@@ -72,10 +71,6 @@ function Jobs.define(Module, spec)
     end
 
     function Module.needs(character, job, subject, with)
-        local row = Module.JOBS[job]
-        if row and row.needs then
-            return row.needs(character, subject, with)
-        end
         return Materials.needs(character, Module.materials(character, job, subject, with))
     end
 

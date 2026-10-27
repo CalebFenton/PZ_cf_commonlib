@@ -25,6 +25,31 @@ function Tiles.newEntity(square, spriteName)
     return thumpable
 end
 
+--- Adds `isoObject`, made in code on the authority, to `square` as a special object, at
+--- `options.index` on it (on top if nil), and publishes it in the order the engine needs:
+--- `options.beforeSend(isoObject)` finishes it on the square; the clients get it (a server's
+--- transmitCompleteItemToClients; nothing in single player); `options.afterSend(isoObject)` makes
+--- the changes that sync by its index on the square, which a client drops for an object it hasn't
+--- got yet; then OnObjectAdded fires, which the game fires only for an object a client sends
+--- (AddItemToMapPacket), as vanilla's TrapBO fires it. `options.announce == false` leaves that to
+--- the caller's own code, such as a build menu OnCreate that fires it. Authority only. Returns
+--- isoObject.
+function Tiles.addToWorld(square, isoObject, options)
+    options = options or {}
+    square:AddSpecialObject(isoObject, options.index or -1)
+    if options.beforeSend then
+        options.beforeSend(isoObject)
+    end
+    isoObject:transmitCompleteItemToClients()
+    if options.afterSend then
+        options.afterSend(isoObject)
+    end
+    if options.announce ~= false then
+        triggerEvent("OnObjectAdded", isoObject)
+    end
+    return isoObject
+end
+
 -- The priority of the library's one loader per sprite: above vanilla's own loaders (MapObjects/*).
 local LOAD_PRIORITY = 6
 

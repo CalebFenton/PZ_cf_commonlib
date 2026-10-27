@@ -85,4 +85,23 @@ function GeneratorReach.eachSquare(x, y, z, fn)
     end
 end
 
+--- Lets this side's chunks go of the squares a running generator at x, y, z powered, as the
+--- generator switching off does (IsoGenerator.setSurroundingElectricity); otherwise they stay
+--- powered here until their chunks reload. For a client whose copy of a running generator left
+--- before the server's switch-off could reach it. A running generator's position is listed in
+--- every chunk its reach touches (IsoChunk.addGeneratorPos).
+function GeneratorReach.release(x, y, z)
+    local radius = GeneratorReach.range()
+    local chunkSquares = getChunkSizeInSquares()
+    local cell = getCell()
+    for wx = math.floor((x - radius) / chunkSquares), math.floor((x + radius) / chunkSquares) do
+        for wy = math.floor((y - radius) / chunkSquares), math.floor((y + radius) / chunkSquares) do
+            local chunk = cell:getChunk(wx, wy)
+            if chunk then
+                chunk:removeGeneratorPos(x, y, z)
+            end
+        end
+    end
+end
+
 return GeneratorReach

@@ -25,8 +25,9 @@ translation keys or commands; a mod passes those in. Every function's doc commen
 | `Chance` | shared | chances and random picks on one roll a test can set |
 | `Tables` | shared | deep comparison of plain values |
 | `Items` | shared | taking, giving, adding, removing and dropping items so clients see it; working tools; the input a build consumed or a craft took |
-| `Tiles` | shared | what runs as a tile loads (one loader per sprite for every mod), a new entity of a tile, an object's tile (sent only when it changes), its entity's tile, its overlays |
+| `Tiles` | shared | what runs as a tile loads (one loader per sprite for every mod), a new entity of a tile, adding an object made in code to the world and publishing it, an object's tile (sent only when it changes), its entity's tile, its overlays |
 | `Containers` | shared | item filters on placed objects' containers, set on every side |
+| `VehicleParts` | shared | whether a vehicle's door part leaves what it covers open |
 | `GeneratorReach` | shared | which generators are vanilla's, a vanilla generator's reach as the save's options set it, and what mods' placed objects draw |
 | `Materials` | shared | a job's materials list read as tooltip needs and as what it uses up |
 | `Jobs` | shared | job modules: one refusal, in one order, for the menu, the action and the authority, and how the authority does a job |

@@ -112,4 +112,16 @@ function Items.firstInput(craftRecipeData, matches)
     return nil
 end
 
+-- Item ConditionMax by full type, read once from the item scripts.
+local CONDITION_MAX = {}
+
+--- The ConditionMax of items of `fullType`, as its item script gives it; 100 for a type with none.
+function Items.conditionMaxOf(fullType)
+    if not CONDITION_MAX[fullType] then
+        local script = getScriptManager():FindItem(fullType)
+        CONDITION_MAX[fullType] = script and script:getConditionMax() or 100
+    end
+    return CONDITION_MAX[fullType]
+end
+
 return Items

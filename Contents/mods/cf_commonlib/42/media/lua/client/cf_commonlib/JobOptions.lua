@@ -73,7 +73,7 @@ function JobOptions.clicked(matches)
     end
 end
 
---- Fills the world's right-click menu for what `find(worldobjects)` finds there (an
+--- Fills the world's right-click menu for what `find(worldobjects, character)` finds there (an
 --- object, or whatever the fill reads; JobOptions.clicked finds one by a test of it):
 --- `fill(context, playerNum, character, found, worldobjects)`. Nothing for a character in a
 --- vehicle or when it finds nothing; the game's test pass only learns there is something. Returns
@@ -82,7 +82,7 @@ function JobOptions.onWorldMenu(find, fill)
     local function onFill(playerNum, context, worldobjects, test)
         local character = getSpecificPlayer(playerNum)
         if not character or character:getVehicle() then return end
-        local found = find(worldobjects)
+        local found = find(worldobjects, character)
         if not found then return end
         if test then return ISWorldObjectContextMenu.setTest() end
         fill(context, playerNum, character, found, worldobjects)

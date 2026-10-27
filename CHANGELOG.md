@@ -48,7 +48,7 @@ What each version changes for a mod that calls the library. Versions follow sema
   `addEach(menu, playerNum, Jobs, job, target, items, label?, nameOf?)` take the job module in
   place of the action class and feature; the label defaults to the row's `label`, else the
   action's `labelKey(job)`. `JobOptions.showVerdict` greys an option by a verdict (a batch's too).
-  `onWorldMenu(find, fill)` takes any `find(worldobjects)`; `JobOptions.clicked(matches)`
+  `onWorldMenu(find, fill)` takes any `find(worldobjects, character)`; `JobOptions.clicked(matches)`
   is the finder of the first clicked object a test accepts. `findClicked`, `addSubMenu` and
   `subMenuOf` moved here from `Needs`; `firstOfEach` moved to `Items`.
 - `Needs` is tooltip rendering only; a tool need is named by its material's `item`.

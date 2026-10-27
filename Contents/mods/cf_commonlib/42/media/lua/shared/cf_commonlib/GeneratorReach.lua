@@ -1,6 +1,52 @@
--- A vanilla generator's reach as the save's options set it.
+-- Vanilla generators: which IsoGenerators are one, the reach the save's options give them, and
+-- what mods' own machines draw from whatever powers them. Mods meet here rather than through each
+-- other's globals, so each works without the other.
 
 local GeneratorReach = {}
+
+-- Tests of IsoGenerators that are a mod's own machine (GeneratorReach.excludeGenerators).
+local excluded = {}
+-- Mods' answers of what their placed objects draw (GeneratorReach.addDraw), in the order added.
+local draws = {}
+
+--- Has `isOwn(generator)` tell IsoGenerators that are a mod's own machine, such as a battery bank
+--- built as one, and no vanilla generator (isVanillaGenerator).
+function GeneratorReach.excludeGenerators(isOwn)
+    table.insert(excluded, isOwn)
+end
+
+--- Whether `object` is a vanilla generator: an IsoGenerator no mod claims (excludeGenerators).
+function GeneratorReach.isVanillaGenerator(object)
+    if object == nil or not instanceof(object, "IsoGenerator") then
+        return false
+    end
+    for _, isOwn in ipairs(excluded) do
+        if isOwn(object) then
+            return false
+        end
+    end
+    return true
+end
+
+--- Has `draw(object)` say what a mod's placed object draws, for a mod that bills placed loads, as
+--- vanilla's getGeneratorPowerConsumption says for an appliance: the kind a status lists it as (the
+--- mod's own translation key) and the generator fuel an hour it would draw now in vanilla's units,
+--- powered or not; or nil while it draws nothing.
+---@param draw fun(object: IsoObject): string?, number?
+function GeneratorReach.addDraw(draw)
+    table.insert(draws, draw)
+end
+
+--- The first answer of addDraw's for `object` that draws: its kind and fuel an hour; or nil.
+function GeneratorReach.drawOf(object)
+    for _, draw in ipairs(draws) do
+        local kind, fuel = draw(object)
+        if kind and fuel and fuel > 0 then
+            return kind, fuel
+        end
+    end
+    return nil
+end
 
 -- The map's lowest and highest levels (IsoChunk.getGridSquare).
 local LOWEST_LEVEL, HIGHEST_LEVEL = -32, 31

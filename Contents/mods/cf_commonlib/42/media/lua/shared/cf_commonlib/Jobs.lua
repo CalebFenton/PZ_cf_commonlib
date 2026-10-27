@@ -6,40 +6,48 @@
 -- - blocker(character, subject, with): the state of the target that refuses the job, as a
 --   translation key, or nil. hideBlocked: a menu leaves the job out, rather than greyed, while its
 --   blocker refuses it, as it belongs to another state of the target.
--- - withRefusal(character, subject, with), if any: what refuses `with`, what the character
---   brings, checked after the needs in a menu so it shows only once they are met.
+-- - with = isKind(item), if the job works with an inventory item: `with` must be one the character
+--   carries, bags included, of a kind isKind accepts, else `withMissing` (a translation key; the
+--   spec's unknown without one) refuses it. withOptional: the job may also be done with none.
+-- - withRefusal(character, subject, with), if any: what else refuses `with`, asked once it passed
+--   the row's `with`.
 -- - materials: what it takes of the character (Materials), or a function(character, subject,
 --   with) of them, which must answer for any subject, refused or not; absent when it takes nothing.
 --   needs(character, subject, with), in its place, gives the needs themselves for what no
 --   materials list says, such as a crafting recipe's inputs; the site's act then takes them.
 -- - xp: { perk = "Name", amount }, what it teaches once done.
+-- - label: the translation key of the job's name in a menu, where the action's labelKey(job)
+--   doesn't give it (JobOptions).
 -- - tooltip: the translation key of a sentence saying what the job does, which heads its option's
 --   tooltip (JobOptions), as a crafting recipe's Tooltip does.
 -- - light: it needs light to see by. Only the player's own side can tell (IsoPlayer.tooDarkToRead
 --   is false for a remote player), so the menu and the action's isValid check it, not refusal.
 -- `subject` is what the rows read of the target worked at (the module's subjectOf), and `with` is
 -- what the job works with: an inventory item, a second object, or a string a client may send.
+--
+-- A job is refused in one order everywhere (Module.verdict): the target's state (blocker), then
+-- what the character lacks (needs), then what is wrong with `with`, so a menu lists the needs
+-- before it says anything of `with`.
 
 local Materials = require "cf_commonlib/Materials"
 
 local Jobs = {}
 
---- Whether `item` is an inventory item `character` carries, bags included, of a kind `isKind(item)`
---- accepts (any kind without it).
-function Jobs.carries(character, item, isKind)
-    return instanceof(item, "InventoryItem") and (not isKind or isKind(item))
-        and character:getInventory():containsRecursive(item)
+-- Whether `item` is an inventory item `character` carries, bags included, of a kind `isKind(item)`
+-- accepts.
+local function carries(character, item, isKind)
+    return instanceof(item, "InventoryItem") and isKind(item) and character:getInventory():containsRecursive(item)
 end
 
 --- Why a job is refused: `blocker` (a translation key) if any, else, while any of `needs` is unmet,
---- `short`, or without it the kind of the first unmet need (Materials.unmetKind), else nil.
+--- `short`, or without it the kind of the first unmet need, else nil.
 function Jobs.refusalOf(blocker, needs, short)
     local unmet = not blocker and Materials.firstUnmet(needs)
     return blocker or unmet and (short or unmet.kind) or nil
 end
 
 --- Gives the job module `Module` its functions, each also taking the `character`, the `job`, the
---- target's subject and `with`: Module.materials, needs, blocker, withRefusal and refusalAt;
+--- target's subject and `with`: Module.materials, needs, verdict and refusalAt;
 --- Module.needsLight(job); Module.subjectOf(target); and Module.refusal(character, job, target,
 --- with), which reads the subject itself. `spec`:
 --- - short, if any: the refusal while a need is unmet (a translation key the mod defines), in
@@ -76,24 +84,36 @@ function Jobs.define(Module, spec)
         return row ~= nil and row.light == true
     end
 
-    function Module.blocker(character, job, subject, with)
+    local function withRefusal(character, row, subject, with)
+        if row.with and not (with == nil and row.withOptional) and not carries(character, with, row.with) then
+            return row.withMissing or unknown
+        end
+        return row.withRefusal and row.withRefusal(character, subject, with) or nil
+    end
+
+    --- How the job stands at `subject`, in the order it is refused: { blocker }, the target's
+    --- state, with `hidden` when the row hides it (hideBlocked); else { needs, withRefusal }, what
+    --- it takes of the character and, once they have it all, what is wrong with `with`.
+    function Module.verdict(character, job, subject, with)
         local row = Module.JOBS[job]
         if not row then
-            return unknown
+            return { blocker = unknown }
         end
-        return row.blocker and row.blocker(character, subject, with) or nil
+        local blocker = row.blocker and row.blocker(character, subject, with)
+        if blocker then
+            return { blocker = blocker, hidden = row.hideBlocked == true }
+        end
+        local needs = Module.needs(character, job, subject, with)
+        return {
+            needs = needs,
+            withRefusal = not Materials.firstUnmet(needs) and withRefusal(character, row, subject, with) or nil,
+        }
     end
 
-    function Module.withRefusal(character, job, subject, with)
-        local row = Module.JOBS[job]
-        return row and row.withRefusal and row.withRefusal(character, subject, with) or nil
-    end
-
-    --- What refuses the job at `subject`: a blocker first, then what is wrong with `with`, then the
-    --- first unmet need (Jobs.refusalOf).
+    --- What refuses the job at `subject`, a translation key or nil (Module.verdict's order).
     function Module.refusalAt(character, job, subject, with)
-        return Module.blocker(character, job, subject, with) or Module.withRefusal(character, job, subject, with)
-            or Jobs.refusalOf(nil, Module.needs(character, job, subject, with), spec.short)
+        local verdict = Module.verdict(character, job, subject, with)
+        return Jobs.refusalOf(verdict.blocker, verdict.needs, spec.short) or verdict.withRefusal
     end
 
     --- What refuses `character` doing `job` at `target` with `with`, as this side knows it now.
@@ -143,12 +163,12 @@ function Jobs.perform(Module, site, character, job, target, with)
 end
 
 --- A site of Jobs.perform for jobs that work on the target itself, with nothing to bring up to
---- now: `DO[job](character, nil, row, target, with, materials)` does one and returns true when it
---- was done.
+--- now: `DO[job](character, row, target, with, materials)` does one and returns true when it was
+--- done.
 function Jobs.targetSite(DO)
     return {
         act = function(character, job, place, row, target, with, materials)
-            return DO[job](character, place, row, target, with, materials)
+            return DO[job](character, row, target, with, materials)
         end,
     }
 end

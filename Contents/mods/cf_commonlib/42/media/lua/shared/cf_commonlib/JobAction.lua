@@ -151,26 +151,37 @@ end
 
 --- Makes the job class `Action` (a JobAction) the action of every job of several features, each a
 --- job module (Jobs.define) of jobs at one kind of object or vehicle. `FEATURES[feature]`:
---- isTarget(target), the objects or vehicles it works at; jobs, its job module; site(), its side
---- of the jobs on the authority (Jobs.perform), looked up when a job completes, since server files
---- load after shared ones; reach, if any, its own in place of the class's REACH. A row's length is
---- `minutes` of game time or `units`, action units as vanilla times its own jobs: a number, or a
---- function(target, with, character) of one. A `with` that is an inventory item is carried, or
---- with the row's `inTarget` in the target's container. A row's `wield`: `with` is the tool, held
---- in the primary hand for the whole job; its `equip`, if any, a function(character, target, with)
---- of another tool to hold: an item, or a predicate the first carried match of which is held. At a
---- vehicle, the row's `area(vehicle, with)` names the vehicle area the job is done from. Gives
---- Action:
+--- isTarget(target), the objects or vehicles it works at; jobs, its job module, which gets
+--- `action` (Action) and `feature` (the name) for the menus (JobOptions); site, if any, its side of
+--- the jobs on the authority (Jobs.perform), where the shared files can give it; reach, if any,
+--- its own in place of the class's REACH. A row's length is `minutes` of game time or `units`,
+--- action units as vanilla times its own jobs: a number, or a function(target, with, character) of
+--- one. A `with` that is an inventory item is carried, or with the row's `inTarget` in the target's
+--- container. A row's `wield`: `with` is the tool, held in the primary hand for the whole job; its
+--- `equip`, if any, a function(character, target, with) of another tool to hold: an item, or a
+--- predicate the first carried match of which is held. At a vehicle, the row's `area(vehicle,
+--- with)` names the vehicle area the job is done from. Gives Action:
 --- - jobsOf(feature), the job module of `feature`;
+--- - serve(sites), which gives each feature `sites` names its site: the server files' way, as they
+---   load after the shared ones;
 --- - new(character, feature, job, target, with), nil for a feature or job there is none of: those
 ---   come from the client, every later step looks them up, and the server turns down a request
 ---   whose new() gives no action (NetTimedActionPacket.processServer);
 --- - completeJob(character, feature, job, target, with), the job done on the authority as complete()
----   does it once the character is found at it (Jobs.perform); returns whether it was done;
+---   does it once the character is found at it (Jobs.perform); returns whether it was done, never
+---   for a feature no site serves;
 --- - queue(playerNum, feature, job, target, with), which walks the character over, keeping their
 ---   queue, and queues the job there holding its tool. Client only;
 --- and the methods JobAction asks for, with complete(), which does the job.
 function JobAction.forFeatures(Action, FEATURES)
+    -- On the class, which a reload of its file keeps, as the server files served it only once.
+    local sites = Action.sites or {}
+    Action.sites = sites
+    for feature, entry in pairs(FEATURES) do
+        entry.jobs.action, entry.jobs.feature = Action, feature
+        sites[feature] = entry.site or sites[feature]
+    end
+
     local function rowOf(feature, job)
         local entry = FEATURES[feature]
         return entry and entry.jobs.JOBS[job]
@@ -178,6 +189,12 @@ function JobAction.forFeatures(Action, FEATURES)
 
     function Action.jobsOf(feature)
         return FEATURES[feature].jobs
+    end
+
+    function Action.serve(served)
+        for feature, site in pairs(served) do
+            sites[feature] = site
+        end
     end
 
     function Action:row()
@@ -235,8 +252,11 @@ function JobAction.forFeatures(Action, FEATURES)
     end
 
     function Action.completeJob(character, feature, job, target, with)
-        local entry = FEATURES[feature]
-        return Jobs.perform(entry.jobs, entry.site(), character, job, target, with)
+        local entry, site = FEATURES[feature], sites[feature]
+        if not (entry and site) then
+            return false
+        end
+        return Jobs.perform(entry.jobs, site, character, job, target, with)
     end
 
     -- The job's own rules are rechecked by Jobs.perform, after it catches the target up.
@@ -265,17 +285,20 @@ function JobAction.forFeatures(Action, FEATURES)
     function Action.queue(playerNum, feature, job, target, with)
         local row = rowOf(feature, job)
         local character = getSpecificPlayer(playerNum)
+        local function queueThere()
+            local tool = row.wield and with or row.equip and row.equip(character, target, with)
+            if tool then
+                local twoHands = type(tool) ~= "function" and instanceof(tool, "HandWeapon") and tool:isTwoHandWeapon()
+                ISWorldObjectContextMenu.equip(character, character:getPrimaryHandItem(), tool, true, twoHands)
+            end
+            ISTimedActionQueue.add(Action:new(character, feature, job, target, with))
+        end
         if instanceof(target, "BaseVehicle") then
             ISTimedActionQueue.add(ISPathFindAction:pathToVehicleArea(character, target, row.area(target, with)))
-        elseif not Squares.walkTo(playerNum, target:getSquare()) then
-            return
+            queueThere()
+        else
+            Squares.queueBeside(character, target:getSquare(), queueThere)
         end
-        local tool = row.wield and with or row.equip and row.equip(character, target, with)
-        if tool then
-            local twoHands = type(tool) ~= "function" and instanceof(tool, "HandWeapon") and tool:isTwoHandWeapon()
-            ISWorldObjectContextMenu.equip(character, character:getPrimaryHandItem(), tool, true, twoHands)
-        end
-        ISTimedActionQueue.add(Action:new(character, feature, job, target, with))
     end
 end
 

@@ -1,89 +1,131 @@
--- The right-click option of a job of a JobAction.forFeatures class, greyed out as its job module
--- would refuse it, so the menu, the action's start() and the authority can't disagree; the world
--- menu's hook for an object's options; and how a menu reads an option of vanilla's.
+-- The right-click options of jobs of a JobAction.forFeatures class, greyed out as their job
+-- module's verdict (Jobs.define) refuses them, so the menu, the action's start() and the authority
+-- can't disagree; the world menu's hook for a mod's options; and the menu plumbing they share:
+-- finding the clicked object, a submenu, and how a menu reads an option of vanilla's.
 
 require "ISUI/ISWorldObjectContextMenu"
 local Needs = require "cf_commonlib/Needs"
+local Squares = require "cf_commonlib/Squares"
 
 local JobOptions = {}
 
---- Adds to `menu` the option `label` (without one, the text of the class's Action.labelKey(job))
---- that queues `feature`'s `job` of the action class `Action` (JobAction.forFeatures) at `target`
---- with `with`, its tooltip headed by what the job does (its row's tooltip): greyed out saying it's
---- too dark for a job that needs light (Action.TOO_DARK), else with the target's state when that
---- refuses it, else with the needs listed when the character lacks any, else with what is wrong
---- with `with`. A job its target's state refuses that belongs to another state of it
---- (hideBlocked) is left out, as is one at a target this side can't read. Returns the option, or
---- nil when left out.
-function JobOptions.add(menu, playerNum, Action, feature, job, target, with, label)
-    local jobs = Action.jobsOf(feature)
-    local subject = jobs.subjectOf(target)
+--- Greys `option`, of `job` of the job module `Jobs`, out as `verdict` (Jobs' Module.verdict, or one
+--- of the same shape a batch of jobs adds up) says, in the order Jobs refuses it: too dark for a
+--- job that needs light (the action's TOO_DARK), else the target's state, else the needs listed,
+--- else what is wrong with `with`. Its tooltip is headed by what the job does (its row's tooltip).
+function JobOptions.showVerdict(option, character, Jobs, job, verdict)
+    local row = Jobs.JOBS[job]
+    if row and row.tooltip then
+        Needs.describe(option, row.tooltip)
+    end
+    local blocker = Needs.tooDark(character, Jobs.needsLight(job), Jobs.action.TOO_DARK) or verdict.blocker
+    Needs.show(option, not blocker and verdict.needs or {}, blocker)
+    Needs.refuse(option, not option.notAvailable and verdict.withRefusal)
+end
+
+-- The name of `job` of the job module `Jobs` in a menu: its row's `label`, else its action's
+-- labelKey(job).
+local function jobName(Jobs, job)
+    local row = Jobs.JOBS[job]
+    return getText(row and row.label or Jobs.action.labelKey(job))
+end
+
+--- Adds to `menu` the option `label` (without one, the job's name: its row's `label` key, else its
+--- action's labelKey(job)) that queues `job` of the job module `Jobs` (stamped by
+--- JobAction.forFeatures) at `target` with `with`, greyed out as JobOptions.showVerdict says. A job
+--- its target's state refuses that belongs to another state of it (hideBlocked) is left out, as is
+--- one at a target this side can't read. Returns the option, or nil when left out.
+function JobOptions.add(menu, playerNum, Jobs, job, target, with, label)
+    local subject = Jobs.subjectOf(target)
     if not subject then
         return nil
     end
     local character = getSpecificPlayer(playerNum)
-    local blocker = jobs.blocker(character, job, subject, with)
-    local row = jobs.JOBS[job]
-    if blocker and row and row.hideBlocked then
+    local verdict = Jobs.verdict(character, job, subject, with)
+    if verdict.hidden then
         return nil
     end
-    blocker = Needs.tooDark(character, jobs.needsLight(job), Action.TOO_DARK) or blocker
-    local text = label or getText(Action.labelKey(job))
-    local option = menu:addOption(text, playerNum, Action.queue, feature, job, target, with)
-    if row and row.tooltip then
-        Needs.describe(option, row.tooltip)
-    end
-    Needs.show(option, not blocker and jobs.needs(character, job, subject, with), blocker)
-    Needs.refuse(option, not option.notAvailable and jobs.withRefusal(character, job, subject, with))
+    local option = menu:addOption(label or jobName(Jobs, job), playerNum, Jobs.action.queue, Jobs.feature, job, target,
+        with)
+    JobOptions.showVerdict(option, character, Jobs, job, verdict)
     return option
 end
 
---- Adds `job` done with an item carried: a submenu `label` with an option for each of `items`,
---- named `nameOf(item)` (its display name without) and showing it. With none carried, the job's own
---- option without an item, which its blocker refuses saying what to carry.
-function JobOptions.addEach(menu, playerNum, Action, feature, job, target, items, label, nameOf)
+--- Adds `job` done with an item carried: a submenu `label` (the job's name without) with an option
+--- for each of `items`, named `nameOf(item)` (its display name without) and showing it. With none
+--- carried, the job's own option without an item, which its row refuses saying what to carry.
+function JobOptions.addEach(menu, playerNum, Jobs, job, target, items, label, nameOf)
+    label = label or jobName(Jobs, job)
     if #items == 0 then
-        JobOptions.add(menu, playerNum, Action, feature, job, target, nil, label)
+        JobOptions.add(menu, playerNum, Jobs, job, target, nil, label)
         return
     end
-    local submenu = Needs.addSubMenu(menu, label)
+    local submenu = JobOptions.addSubMenu(menu, label)
     for _, item in ipairs(items) do
         local name = nameOf and nameOf(item) or item:getDisplayName()
-        local option = JobOptions.add(submenu, playerNum, Action, feature, job, target, item, name)
+        local option = JobOptions.add(submenu, playerNum, Jobs, job, target, item, name)
         if option then
             option.itemForTexture = item
         end
     end
 end
 
---- The first item of each of `fullTypes` that `character` carries, bags included, in that order;
---- with `keep(fullType)`, of those it accepts only.
-function JobOptions.firstOfEach(character, fullTypes, keep)
-    local inventory, found = character:getInventory(), {}
-    for _, fullType in ipairs(fullTypes) do
-        local item = (not keep or keep(fullType)) and inventory:getFirstTypeRecurse(fullType)
-        if item then
-            table.insert(found, item)
-        end
+--- A finder of JobOptions.onWorldMenu: the first object on the right-clicked squares for which
+--- `matches(object)` is true.
+function JobOptions.clicked(matches)
+    return function(worldobjects)
+        return JobOptions.findClicked(worldobjects, matches)
     end
-    return found
 end
 
---- Fills the world's right-click menu for the first clicked object `isObject(object)` accepts:
---- `fill(context, playerNum, character, object, worldobjects)`. Nothing for a character in a
---- vehicle; the game's test pass only learns there is something. Returns the handler it adds to
---- OnFillWorldObjectContextMenu, for a test to call as the game does.
-function JobOptions.onWorldMenu(isObject, fill)
+--- Fills the world's right-click menu for what `find(worldobjects, character)` finds there (an
+--- object, or whatever the fill reads; JobOptions.clicked finds one by a test of it):
+--- `fill(context, playerNum, character, found, worldobjects)`. Nothing for a character in a
+--- vehicle or when it finds nothing; the game's test pass only learns there is something. Returns
+--- the handler it adds to OnFillWorldObjectContextMenu, for a test to call as the game does.
+function JobOptions.onWorldMenu(find, fill)
     local function onFill(playerNum, context, worldobjects, test)
         local character = getSpecificPlayer(playerNum)
         if not character or character:getVehicle() then return end
-        local object = Needs.findClicked(worldobjects, isObject)
-        if not object then return end
+        local found = find(worldobjects, character)
+        if not found then return end
         if test then return ISWorldObjectContextMenu.setTest() end
-        fill(context, playerNum, character, object, worldobjects)
+        fill(context, playerNum, character, found, worldobjects)
     end
     Events.OnFillWorldObjectContextMenu.Add(onFill)
     return onFill
+end
+
+--- The first object on the right-clicked squares for which `matches(object)` is true, or nil.
+function JobOptions.findClicked(worldobjects, matches)
+    local seen = {}
+    for _, clicked in ipairs(worldobjects) do
+        local square = clicked:getSquare()
+        if square and not seen[square] then
+            seen[square] = true
+            local found = Squares.findObjectOn(square, matches)
+            if found then
+                return found
+            end
+        end
+    end
+    return nil
+end
+
+--- Adds an option named `name` to `context` that opens a new submenu. Returns the submenu and the
+--- option.
+function JobOptions.addSubMenu(context, name)
+    local submenu = ISContextMenu:getNew(context)
+    local option = context:addOption(name)
+    context:addSubMenu(option, submenu)
+    return submenu, option
+end
+
+--- The submenu of `context`'s option named `name` (its text, as the game filled it before the
+--- mod's hook ran), or nil: where a mod's options join vanilla's own for the same object.
+function JobOptions.subMenuOf(context, name)
+    local option = name and context:getOptionFromName(name)
+    return option and option.subOption and context:getSubMenu(option.subOption) or nil
 end
 
 --- The function choosing `option` calls, as a menu finds vanilla's own options: a get-up option

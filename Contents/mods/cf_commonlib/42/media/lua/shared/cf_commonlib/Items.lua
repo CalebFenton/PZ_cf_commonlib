@@ -10,7 +10,8 @@ function Items.notBroken(item)
     return not item:isBroken()
 end
 
---- A test of whether an item is of `fullType`, for what takes one (Jobs.carries, Tables.fromList).
+--- A test of whether an item is of `fullType`, for what takes one (a job row's `with`,
+--- Tables.fromList).
 function Items.ofType(fullType)
     return function(item) return item:getFullType() == fullType end
 end
@@ -28,6 +29,19 @@ function Items.toolFor(character, isTool)
         return held
     end
     return character:getInventory():getFirstEvalRecurse(isTool)
+end
+
+--- The first item of each of `fullTypes` that `character` carries, bags included, in that order;
+--- with `keep(fullType)`, of those it accepts only.
+function Items.firstOfEach(character, fullTypes, keep)
+    local inventory, found = character:getInventory(), {}
+    for _, fullType in ipairs(fullTypes) do
+        local item = (not keep or keep(fullType)) and inventory:getFirstTypeRecurse(fullType)
+        if item then
+            table.insert(found, item)
+        end
+    end
+    return found
 end
 
 --- Takes `item` out of the container that holds it, if any, and tells the clients. Authority only.
@@ -56,15 +70,6 @@ function Items.takeItem(character, item)
     Items.removeItem(item)
 end
 
---- Takes `count` items of `fullType` from `character`'s inventory, bags included. Authority only.
-function Items.takeItems(character, fullType, count)
-    if count <= 0 then return end
-    local items = character:getInventory():getSomeTypeRecurse(fullType, count)
-    for i = 0, items:size() - 1 do
-        Items.takeItem(character, items:get(i))
-    end
-end
-
 --- Gives `character` `count` (default 1) of `itemOrType`, an item or a full type, dropping on
 --- their square what doesn't fit (Actions.addOrDropItem, which also syncs). Authority only.
 function Items.giveItems(character, itemOrType, count)
@@ -75,8 +80,8 @@ function Items.giveItems(character, itemOrType, count)
 end
 
 --- Drops `itemOrType`, an item or a full type, on `square` at a random spot, as dropped items lie.
---- Returns the item. The spot uses ZombRandFloat, so it eats none of the rolls a mod's own chance
---- helper hands out. Authority only.
+--- Returns the item. The spot draws on ZombRandFloat rather than Chance.roll, so a test's set
+--- rolls go only to the chances it means. Authority only.
 function Items.dropOn(square, itemOrType)
     return square:AddWorldInventoryItem(itemOrType, ZombRandFloat(0.2, 0.8), ZombRandFloat(0.2, 0.8), 0)
 end
@@ -89,6 +94,19 @@ function Items.firstConsumed(craftRecipeData, matches)
     for i = 0, (used and used:size() or 0) - 1 do
         if matches(used:get(i)) then
             return used:get(i)
+        end
+    end
+    return nil
+end
+
+--- The first input of a craft, by its recipe data `craftRecipeData` (a craft's OnCreate argument),
+--- for which `matches(item)` holds, or nil: which of the items the recipe let the player choose
+--- went in.
+function Items.firstInput(craftRecipeData, matches)
+    local inputs = craftRecipeData:getAllInputItems()
+    for i = 0, inputs:size() - 1 do
+        if matches(inputs:get(i)) then
+            return inputs:get(i)
         end
     end
     return nil

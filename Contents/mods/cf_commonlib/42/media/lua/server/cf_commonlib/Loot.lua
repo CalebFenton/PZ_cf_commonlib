@@ -2,10 +2,9 @@
 --
 -- The save's sandbox options aren't loaded yet when a mod's files run, nor during the distribution
 -- merge events: IsoWorld.init fires those, then loads the options, then parses the tables, and
--- only then fires OnInitGlobalModData. So each mod registers what puts its entries in
--- (Loot.register), and this runs them all there, then has ItemPickerJava parse the tables again
--- once, as it reads the Lua tables only when it parses them. A multiplayer client fills no
--- containers, so it runs none.
+-- only then fires OnInitGlobalModData. So each mod registers its items (Loot.register), and this
+-- puts them all in there, then has ItemPickerJava parse the tables again once, as it reads the Lua
+-- tables only when it parses them. A multiplayer client fills no containers, so it puts none in.
 
 require "Items/Distributions"
 require "Items/ProceduralDistributions"
@@ -68,13 +67,12 @@ local function unlist(items, fullType)
     end
 end
 
---- Puts `fullType` into the items list of each of `entries` ({ weight, reference } each) at the
---- entry's weight times `multiplier`, replacing what an earlier call put there, so loading another
---- save in the same session doesn't pile entries up. A multiplier of 0 leaves the item out
---- altogether: a zero weight would still spawn through the zombie density bonus, which
---- ItemPickerJava adds rather than multiplies. A list the game lacks is skipped with a line in the
---- log naming `modName`.
-function Loot.place(modName, fullType, entries, multiplier)
+-- Puts `fullType` into the items list of each of `entries` at the entry's weight times
+-- `multiplier`, replacing what an earlier call put there, so loading another save in the same
+-- session doesn't pile entries up. A multiplier of 0 leaves the item out altogether: a zero weight
+-- would still spawn through the zombie density bonus, which ItemPickerJava adds rather than
+-- multiplies. A list the game lacks is skipped with a line in the log naming `modName`.
+local function place(modName, fullType, entries, multiplier)
     for _, entry in ipairs(entries) do
         local items = Loot.resolveItemList(entry[2])
         if items then
@@ -89,23 +87,49 @@ function Loot.place(modName, fullType, entries, multiplier)
     end
 end
 
-local APPLIERS = {}
-
---- Has `apply()` put a mod's entries in (Loot.place) once the save's options are loaded, before
---- the tables are parsed again. A function registered again is run once.
-function Loot.register(apply)
-    for _, known in ipairs(APPLIERS) do
-        if known == apply then return end
+--- Appends to `entries` (a new table when nil) a loot entry { weight, reference } for each
+--- reference of each of `groups` ({ weight, { reference, ... } } each), in order, and returns
+--- `entries`.
+function Loot.entries(groups, entries)
+    entries = entries or {}
+    for _, group in ipairs(groups) do
+        for _, reference in ipairs(group[2]) do
+            table.insert(entries, { group[1], reference })
+        end
     end
-    table.insert(APPLIERS, apply)
+    return entries
+end
+
+-- Each registration: { items, apply }.
+local registered = {}
+
+--- Has each of `items` ({ fullType, entries = { { weight, reference }, ... } } each) put in its
+--- lists at each entry's weight times `multiplierOf(item)`, read once the save's options are
+--- loaded, before the tables are parsed again; replacing what an earlier load put there, and
+--- leaving out an item whose multiplier is 0. `modName` names the mod in the log line of a list the
+--- game lacks. Returns the function that puts them in, for a caller that changes the options; the
+--- same `items` registered again are put in once.
+function Loot.register(modName, items, multiplierOf)
+    for _, known in ipairs(registered) do
+        if known.items == items then
+            return known.apply
+        end
+    end
+    local function apply()
+        for _, item in ipairs(items) do
+            place(modName, item.fullType, item.entries, multiplierOf(item))
+        end
+    end
+    table.insert(registered, { items = items, apply = apply })
+    return apply
 end
 
 Events.OnInitGlobalModData.Add(function()
     if isClient() then
         return
     end
-    for _, apply in ipairs(APPLIERS) do
-        apply()
+    for _, known in ipairs(registered) do
+        known.apply()
     end
     ItemPickerJava.Parse()
 end)

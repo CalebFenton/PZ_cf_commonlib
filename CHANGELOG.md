@@ -3,6 +3,58 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
+## Unreleased
+
+- `GlobalObjects.declare(owner, { prefix, name, isObject, sprites, decorate?, accept? })` replaces
+  `addAccessors`: a feature's identity is declared once, as `owner.feature`, and read by
+  `ObjectSystem.define(owner, { Object, longestPass?, loadOnCreate? })`,
+  `ObjectSystem.deriveSystem(owner, Object)` and `ClientObjects.define(owner, { adoptCopy? })`
+  (no more prefix, name, isObject, sprites or loadPriority arguments; `decorate` is optional;
+  `adoptCopy` runs only when given, `adoptContainer` and `ClientObjects.adopt` are gone). New
+  accessors `owner.objectAt`, `owner.each(fn)` and `owner.summaryAt(x, y, z)`; `summaryOf` and
+  `summaryAt` read the record on the authority (single player included), else the client copy.
+- `ObjectSystem.deriveSystem` adds `lastHour` to the record class's `SAVED_FIELDS` and stamps it on
+  new records (saved key unchanged); `define`'s `longestPass` defaults to `Clock.LONGEST_PASS`.
+- `Containers` (new, shared): `Containers.filter{ sprites, isObject, accept }` sets container
+  filters on every side; `Containers.adopt(isoObject)` for an object built in code.
+  `GlobalObjects.declare`'s `accept` declares one.
+- `Tiles.onLoad(sprites, fn, { matches?, added?, first? })`: one MapObjects loader per sprite for
+  every mod, so mods choose no load priority; `first` runs a system's record loader before the
+  rest. `Tiles.newEntity(square, sprite)`: a new thumpable with its tile's entity.
+- `Chance` (new, shared): roll, hit, within, between, pick, pickWeighted, pickSome, overHours, all
+  drawing on `Chance.roll`.
+- `Clock.now()`, `Clock.unitsPerSecond()`, `Clock.LONGEST_PASS`; `Clock.hoursSince`'s `longest`
+  is optional.
+- `GeneratorReach.excludeGenerators(isOwn)`, `isVanillaGenerator(object)`, `addDraw(draw)` and
+  `drawOf(object)`: mods tell their own generators and placed loads apart without each other's
+  globals.
+- `Loot.register(modName, items, multiplierOf)` takes the items (`{ fullType, entries }`) and
+  returns the function that puts them in; `Loot.place` is no longer public. `Loot.entries(groups)`
+  builds entries from `{ weight, { reference, ... } }` groups.
+- `Squares.positionOf`, `samePosition`, `isPosition`, `eachAround`.
+- `Items.firstInput(craftRecipeData, matches)`; `Items.takeItems` removed.
+- `Jobs`: a row's `with = isKind(item)` (with `withMissing`, `withOptional`) refuses a `with` the
+  character doesn't carry, after the needs; `Jobs.carries` is private. `Module.verdict(character,
+  job, subject, with)` gives `{ blocker, hidden }` or `{ needs, withRefusal }` in the one refusal
+  order (blocker, needs, then `with`), which `refusalAt` now follows too; `Module.blocker` and
+  `Module.withRefusal` are gone. A row's `label` names it in a menu. `Jobs.targetSite`'s `DO[job]`
+  is `(character, row, target, with, materials)`, without the always-nil place.
+- `JobAction.forFeatures`: a feature's `site` is a site, not a function; server files give theirs
+  with `Action.serve({ feature = site })`, and `completeJob` refuses a feature no site serves. Each
+  job module gets `action` and `feature`.
+- `JobOptions.add(menu, playerNum, Jobs, job, target, with, label?)` and
+  `addEach(menu, playerNum, Jobs, job, target, items, label?, nameOf?)` take the job module in
+  place of the action class and feature; the label defaults to the row's `label`, else the
+  action's `labelKey(job)`. `JobOptions.showVerdict` greys an option by a verdict (a batch's too).
+  `onWorldMenu(find, fill)` takes any `find(worldobjects, character)`; `JobOptions.clicked(matches)`
+  is the finder of the first clicked object a test accepts. `findClicked`, `addSubMenu` and
+  `subMenuOf` moved here from `Needs`; `firstOfEach` moved to `Items`.
+- `Needs` is tooltip rendering only; a tool need is named by its material's `item`.
+- `Squares.queueBeside(character, square, queueThere)` replaces `Squares.walkTo`.
+- `OpenAction.show(windows, playerNum, window)` and `OpenAction.close(windows, playerNum, window)`:
+  one window of a family per player, with the controller's focus while open.
+- `Materials.unmetKind` removed.
+
 ## 0.3.1
 
 - `Materials`: water in carried bags, including nested bags, counts toward a job and is consumed

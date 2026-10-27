@@ -1,5 +1,5 @@
--- How a placed object looks: its tile, its entity and its overlays, changed on the authority and
--- sent on to the clients.
+-- Placed objects' tiles: what runs as they load, what entity a tile is, and how an object looks
+-- (its tile, its entity and its overlays), changed on the authority and sent on to the clients.
 
 local Tables = require "cf_commonlib/Tables"
 
@@ -10,6 +10,80 @@ local Tiles = {}
 function Tiles.tileEntity(spriteName)
     local info = SpriteConfigManager.getObjectInfoFromSprite(spriteName)
     return info and info:getScript():getParent()
+end
+
+--- A new thumpable of the tile `spriteName` on `square`, with the entity that owns the tile
+--- (tileEntity) and its components, as the build menu makes one (ISBuildIsoEntity); not yet added
+--- to the square, nor sent. Nil when no entity owns the tile.
+function Tiles.newEntity(square, spriteName)
+    local script = Tiles.tileEntity(spriteName)
+    if not script then
+        return nil
+    end
+    local thumpable = IsoThumpable.new(square:getCell(), square, spriteName, false, nil)
+    GameEntityFactory.CreateIsoObjectEntity(thumpable, script, true)
+    return thumpable
+end
+
+-- The priority of the library's one loader per sprite: above vanilla's own loaders (MapObjects/*).
+local LOAD_PRIORITY = 6
+
+-- Per sprite name, what its tiles run as they load: { first = { fn, ... }, rest = { fn, ... } }.
+local loaders = {}
+
+-- The tile an object shows, as MapObjects reads it.
+local function tileOf(isoObject)
+    local sprite = isoObject:getSprite()
+    return sprite and sprite:getName() or isoObject:getSpriteName()
+end
+
+-- Runs `fns` on `isoObject`, stopping once one takes it off its square or changes its tile from
+-- `name`; returns whether none did.
+local function runLoaders(fns, isoObject, name)
+    for _, fn in ipairs(fns) do
+        fn(isoObject)
+        if isoObject:getObjectIndex() == -1 or tileOf(isoObject) ~= name then
+            return false
+        end
+    end
+    return true
+end
+
+local function loadersOf(name)
+    local entry = loaders[name]
+    if not entry then
+        entry = { first = {}, rest = {} }
+        loaders[name] = entry
+        MapObjects.OnLoadWithSprite(name, function(isoObject)
+            if runLoaders(entry.first, isoObject, name) then
+                runLoaders(entry.rest, isoObject, name)
+            end
+        end, LOAD_PRIORITY)
+    end
+    return entry
+end
+
+--- Runs `fn(isoObject)` for each object of the tiles `sprites` (names) as its chunk loads on this
+--- side. MapObjects.OnLoadWithSprite keeps one function per sprite and priority, so every caller's
+--- goes through one function per sprite: those with `options.first` (a system loading the record
+--- the others read) run before the rest, each group in the order added, and one that takes the
+--- object off its square or changes its tile ends the object's run, as MapObjects does.
+--- `options.matches(isoObject)`, if given, limits fn to the objects it accepts; with
+--- `options.added` fn also runs for each accepted object added later (OnObjectAdded).
+function Tiles.onLoad(sprites, fn, options)
+    options = options or {}
+    local matches = options.matches
+    local run = matches and function(isoObject)
+        if matches(isoObject) then
+            fn(isoObject)
+        end
+    end or fn
+    for _, name in ipairs(sprites) do
+        table.insert(loadersOf(name)[options.first and "first" or "rest"], run)
+    end
+    if options.added then
+        Events.OnObjectAdded.Add(run)
+    end
 end
 
 -- The tile's own sprite, with its properties; setSprite(name) would make a bare texture.

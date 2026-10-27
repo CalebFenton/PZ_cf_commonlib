@@ -164,12 +164,6 @@ function Materials.firstUnmet(needs)
     return nil
 end
 
---- The kind of the first of `needs` the character is short of, or nil when they have them all.
-function Materials.unmetKind(needs)
-    local short = Materials.firstUnmet(needs)
-    return short and short.kind
-end
-
 --- The conditions of the items `list` would take of `character`, one each in the order taken:
 --- what a job that keeps them can give back as worn as they went in.
 function Materials.conditions(character, list)

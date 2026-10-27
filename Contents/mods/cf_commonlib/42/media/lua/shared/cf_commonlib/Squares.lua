@@ -1,6 +1,37 @@
--- Finding objects on squares, and whether a character stands where a job at one is done.
+-- Places and the objects on squares, and whether a character stands where a job at one is done.
 
 local Squares = {}
+
+--- An object's square as { x, y, z }: how commands, statuses and records name a place.
+function Squares.positionOf(isoObject)
+    return { x = isoObject:getX(), y = isoObject:getY(), z = isoObject:getZ() }
+end
+
+--- Whether two places, anything with x, y and z, are the same square; false if either is nil.
+function Squares.samePosition(a, b)
+    return a ~= nil and b ~= nil and a.x == b.x and a.y == b.y and a.z == b.z
+end
+
+--- Whether `position` is a { x, y, z } place, as a command argument from a client must be.
+function Squares.isPosition(position)
+    return type(position) == "table" and type(position.x) == "number" and type(position.y) == "number"
+        and type(position.z) == "number"
+end
+
+--- Calls `fn(square)` for every loaded square on level `z` within `radius` squares of x, y on each
+--- axis, x, y included, until one call returns a value other than nil, which this returns.
+function Squares.eachAround(x, y, z, radius, fn)
+    for squareX = x - radius, x + radius do
+        for squareY = y - radius, y + radius do
+            local square = getSquare(squareX, squareY, z)
+            local result = square and fn(square)
+            if result ~= nil then
+                return result
+            end
+        end
+    end
+    return nil
+end
 
 --- The first object on `square` for which `matches(object)` is true, or nil. Takes a nil square.
 function Squares.findObjectOn(square, matches)
@@ -41,11 +72,15 @@ function Squares.withinReach(character, target, reach)
         and math.abs(character:getZ() - square:getZ()) < 1
 end
 
---- Queues the walk of `playerNum`'s character to beside `square`, keeping their queue, and returns
---- the character, or nil when no square beside it can be reached (luautils.walkAdj). Client only.
-function Squares.walkTo(playerNum, square)
-    local character = getSpecificPlayer(playerNum)
-    return luautils.walkAdj(character, square, true) and character or nil
+--- Queues the walk of `character` to beside `square`, keeping their queue (luautils.walkAdj), and
+--- there `queueThere()`, which queues what they do once there. Returns false, queueing nothing,
+--- when no square beside it can be reached. Client only.
+function Squares.queueBeside(character, square, queueThere)
+    if not luautils.walkAdj(character, square, true) then
+        return false
+    end
+    queueThere()
+    return true
 end
 
 return Squares

@@ -1,5 +1,4 @@
--- The idioms every right-click menu shares: finding the clicked object, a submenu, and an option
--- greyed out saying why.
+-- An option's tooltip saying why it is greyed out, and what it does.
 --
 -- Vanilla explains a greyed-out option two ways. One state or tool holding it back is a plain
 -- sentence (Needs.refuse), as the generator's options say. A job that takes several things lists
@@ -12,13 +11,9 @@
 
 require "ISUI/ISWorldObjectContextMenu"
 require "Vehicles/ISUI/ISVehicleMechanics"
-local Squares = require "cf_commonlib/Squares"
 local Materials = require "cf_commonlib/Materials"
 
 local Needs = {}
-
--- An item to name for each tool tag, as vanilla names the wrench its jobs take.
-local TOOL_ITEMS = { WRENCH = "Base.Wrench", SCREWDRIVER = "Base.Screwdriver" }
 
 local function nameOf(need)
     if need.label then
@@ -27,8 +22,6 @@ local function nameOf(need)
         return getText(need.labelKey)
     elseif need.perk then
         return need.perk:getName()
-    elseif need.tool then
-        return getItemNameFromFullType(TOOL_ITEMS[need.tool] or need.item)
     elseif need.item then
         return getItemNameFromFullType(need.item)
     end
@@ -110,38 +103,6 @@ function Needs.show(option, needs, blocker)
         text = text .. line(need)
     end
     setTooltip(option, text)
-end
-
---- Adds an option named `name` to `context` that opens a new submenu. Returns the submenu and the
---- option.
-function Needs.addSubMenu(context, name)
-    local submenu = ISContextMenu:getNew(context)
-    local option = context:addOption(name)
-    context:addSubMenu(option, submenu)
-    return submenu, option
-end
-
---- The submenu of `context`'s option named `name` (its text, as the game filled it before the
---- mod's hook ran), or nil: where a mod's options join vanilla's own for the same object.
-function Needs.subMenuOf(context, name)
-    local option = name and context:getOptionFromName(name)
-    return option and option.subOption and context:getSubMenu(option.subOption) or nil
-end
-
---- The first object on the right-clicked squares for which `matches(object)` is true, or nil.
-function Needs.findClicked(worldobjects, matches)
-    local seen = {}
-    for _, clicked in ipairs(worldobjects) do
-        local square = clicked:getSquare()
-        if square and not seen[square] then
-            seen[square] = true
-            local found = Squares.findObjectOn(square, matches)
-            if found then
-                return found
-            end
-        end
-    end
-    return nil
 end
 
 return Needs

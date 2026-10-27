@@ -1,63 +1,35 @@
 -- The client's side of the features the authority keeps in a Global Object System: the system that
 -- receives each object's summary (also in single player, where it loops back), and this client's
--- own copies of their tiles, which need what the server's copies have but neither save nor send,
--- such as a container's AcceptItemFunction.
+-- own copies of their tiles, for a feature whose copies need what the server's have but neither
+-- save nor send. Container filters are Containers', set on every side.
 
 require "Map/CGlobalObjectSystem"
 require "Map/CGlobalObject"
+local Tiles = require "cf_commonlib/Tiles"
 
 local ClientObjects = {}
 
---- Has this client set up its copies of the tiles of `sprites` (names) that `isObject` tells:
---- `adoptCopy(isoObject)` on a multiplayer client's copy that arrives with its chunk or that the
---- server just placed (single player sets up the authority's own), and
---- `adoptContainer(container)` on each of their containers opened in the loot window, before
---- anything is dropped in it, on every side. `loadPriority` is the mod's for its sprites:
---- MapObjects.OnLoadWithSprite keeps one function per sprite and priority.
-function ClientObjects.adopt(sprites, isObject, adoptCopy, adoptContainer, loadPriority)
-    if isClient() then
-        local function adopt(isoObject)
-            if isObject(isoObject) then
-                adoptCopy(isoObject)
-            end
-        end
-        for _, name in ipairs(sprites) do
-            MapObjects.OnLoadWithSprite(name, adopt, loadPriority)
-        end
-        Events.OnObjectAdded.Add(adopt)
-    end
-    Events.OnRefreshInventoryWindowContainers.Add(function(page, state)
-        if state ~= "buttonsAdded" then return end
-        for _, button in ipairs(page.backpacks or {}) do
-            local container = button.inventory
-            local parent = container and container:getParent()
-            if parent and isObject(parent) then
-                adoptContainer(container)
-            end
-        end
-    end)
-end
-
---- Defines and registers the client system of a feature the authority keeps in a Global Object
---- System of the same `spec.prefix` and `spec.name` (ObjectSystem.define): classes
---- <prefix>Client<name> and <prefix>Client<name>System; `owner` (its shared module, with
---- SYSTEM_NAME; it gets clientSystem, for GlobalObjects' accessors) and `isObject`. Adopts the
---- copies of its tiles, whose sprite names are `spec.sprites`, with `spec.adoptCopy` and
---- `spec.adoptContainer` at `spec.loadPriority` (ClientObjects.adopt). Returns the system class.
-function ClientObjects.define(spec)
-    local ClientObject = CGlobalObject:derive(spec.prefix .. "Client" .. spec.name)
-    local System = CGlobalObjectSystem:derive(spec.prefix .. "Client" .. spec.name .. "System")
+--- Defines and registers the client system of `owner`'s feature (owner.feature,
+--- GlobalObjects.declare), which the authority keeps in a Global Object System
+--- (ObjectSystem.define): classes <prefix>Client<name> and <prefix>Client<name>System; owner gets
+--- clientSystem. `options.adoptCopy(isoObject)`, if given, runs on a multiplayer client's copy of
+--- each of the feature's tiles as it arrives with its chunk or the server places it (single player
+--- has the authority's own). Returns the system class.
+function ClientObjects.define(owner, options)
+    local feature = owner.feature
+    local ClientObject = CGlobalObject:derive(feature.prefix .. "Client" .. feature.name)
+    local System = CGlobalObjectSystem:derive(feature.prefix .. "Client" .. feature.name .. "System")
 
     function System:new()
-        return CGlobalObjectSystem.new(self, spec.owner.SYSTEM_NAME)
+        return CGlobalObjectSystem.new(self, owner.SYSTEM_NAME)
     end
 
     function System:initSystem()
-        spec.owner.clientSystem = self
+        owner.clientSystem = self
     end
 
     function System:isValidIsoObject(isoObject)
-        return spec.isObject(isoObject)
+        return feature.isObject(isoObject)
     end
 
     function System:newLuaObject(globalObject)
@@ -69,7 +41,10 @@ function ClientObjects.define(spec)
     end
 
     CGlobalObjectSystem.RegisterSystemClass(System)
-    ClientObjects.adopt(spec.sprites, spec.isObject, spec.adoptCopy, spec.adoptContainer, spec.loadPriority)
+    local adoptCopy = options and options.adoptCopy
+    if adoptCopy and isClient() then
+        Tiles.onLoad(feature.sprites, adoptCopy, { matches = feature.isObject, added = true })
+    end
     return System
 end
 

@@ -1,7 +1,7 @@
 -- The authority's side of features kept in a Global Object System: a system per feature that saves
 -- each object's record with the world, runs every record each ten minutes loaded or not, and sends
 -- every client its summary; a base for the records; and their side of the jobs players do at them
--- (Jobs.perform). Each side reads them through the accessors of GlobalObjects.addAccessors.
+-- (Jobs.perform). Each feature is declared once (GlobalObjects.declare), which every side reads.
 --
 -- A save keeps each system by its SYSTEM_NAME and each record by the fields its class's
 -- SAVED_FIELDS names, so a mod's names for them must never change.
@@ -11,15 +11,17 @@ if isClient() then return end
 require "Map/SGlobalObjectSystem"
 require "Map/SGlobalObject"
 local Clock = require "cf_commonlib/Clock"
+local Containers = require "cf_commonlib/Containers"
 local Tables = require "cf_commonlib/Tables"
+local Tiles = require "cf_commonlib/Tiles"
 
 local ObjectSystem = {}
 
 --- The base of a feature's records. A record is its global object's table, so the fields its
---- class's SAVED_FIELDS names are saved with the world. A class defines advance(hours), what the
---- time does to it; afterChange(), which shows and tells what changed; and buildSummary(), what
---- every client keeps of it. A class whose time can't be told while parts of it are unloaded
---- overrides catchUp() to wait for them.
+--- class's SAVED_FIELDS names are saved with the world, with lastHour, when time last reached it,
+--- which the system adds. A class defines advance(hours), what the time does to it; afterChange(),
+--- which shows and tells what changed; and buildSummary(), what every client keeps of it. A class
+--- whose time can't be told while parts of it are unloaded overrides catchUp() to wait for them.
 local Object = SGlobalObject:derive("cf_commonlib_Object")
 ObjectSystem.Object = Object
 
@@ -50,21 +52,34 @@ function Object:sendSummary()
     end
 end
 
---- A system class <spec.prefix><spec.name>System keeping the records of `spec.owner` (its shared
---- module: SYSTEM_NAME; it gets serverSystem, for GlobalObjects' accessors) in class `spec.Object`,
---- for the isoObjects `spec.isObject` says are its: each record is saved by Object.SAVED_FIELDS and
---- sends clients its summary. Not registered: ObjectSystem.define does that, or the mod.
-function ObjectSystem.deriveSystem(spec)
-    local System = SGlobalObjectSystem:derive(spec.prefix .. spec.name .. "System")
-    System.owner = spec.owner
+local function listed(list, value)
+    for _, entry in ipairs(list) do
+        if entry == value then
+            return true
+        end
+    end
+    return false
+end
+
+--- A system class <prefix><name>System of `owner`'s feature (owner.feature, GlobalObjects.declare)
+--- keeping its records in class `Object`; owner gets serverSystem. Each record is saved by
+--- Object.SAVED_FIELDS, to which this adds lastHour, stamped now on a new record, and sends the
+--- clients its summary. Not registered: ObjectSystem.define does that, or the mod.
+function ObjectSystem.deriveSystem(owner, Object)
+    local feature = owner.feature
+    local System = SGlobalObjectSystem:derive(feature.prefix .. feature.name .. "System")
+    System.owner = owner
+    if not listed(Object.SAVED_FIELDS, "lastHour") then
+        table.insert(Object.SAVED_FIELDS, "lastHour")
+    end
 
     function System:new()
-        return SGlobalObjectSystem.new(self, spec.owner.SYSTEM_NAME)
+        return SGlobalObjectSystem.new(self, owner.SYSTEM_NAME)
     end
 
     function System:initSystem()
-        spec.owner.serverSystem = self
-        self.system:setObjectModDataKeys(spec.Object.SAVED_FIELDS)
+        owner.serverSystem = self
+        self.system:setObjectModDataKeys(Object.SAVED_FIELDS)
         self.system:setObjectSyncKeys({ "summary" })
     end
 
@@ -78,34 +93,37 @@ function ObjectSystem.deriveSystem(spec)
     end
 
     function System:isValidIsoObject(isoObject)
-        return spec.isObject(isoObject)
+        return feature.isObject(isoObject)
     end
 
+    -- A saved record has its lastHour; a new one's time starts now.
     function System:newLuaObject(globalObject)
-        return spec.Object:new(self, globalObject)
+        local record = Object:new(self, globalObject)
+        record.lastHour = record.lastHour or Clock.now()
+        return record
     end
 
     return System
 end
 
---- Defines and registers a feature's system (ObjectSystem.deriveSystem), whose records are
---- ObjectSystem.Object's, run each ten minutes and loaded as their tiles load. `spec` adds:
---- sprites, its tiles' names; loadPriority, the mod's for them (MapObjects.OnLoadWithSprite keeps
---- one function per sprite and priority); longestPass, the most game hours one catch-up counts, as
---- a save loaded after the clock jumped would otherwise make up days at once; and loadOnCreate,
---- for System.OnCreate(params), a build menu OnCreate that gives the built tile its record. Returns
---- the class.
-function ObjectSystem.define(spec)
-    local System = ObjectSystem.deriveSystem(spec)
-    System.longestPass = spec.longestPass
+--- Defines and registers the system of `owner`'s feature (ObjectSystem.deriveSystem), whose
+--- records are `spec.Object`'s (an ObjectSystem.Object), run each ten minutes and loaded as their
+--- tiles load. `spec` also takes longestPass, the most game hours one catch-up counts (default
+--- Clock.LONGEST_PASS), and loadOnCreate, for System.OnCreate(params), a build menu OnCreate that
+--- gives the built tile its record. Returns the class.
+function ObjectSystem.define(owner, spec)
+    local System = ObjectSystem.deriveSystem(owner, spec.Object)
+    System.longestPass = spec.longestPass or Clock.LONGEST_PASS
 
     if spec.loadOnCreate then
         -- On the authority: the build adds the tile to the square before this runs and sends it to
-        -- the clients after, and nothing else announces a built entity to the system.
+        -- the clients after, and nothing else announces a built entity to the system or the
+        -- container filters. The record may add containers, which get theirs too.
         function System.OnCreate(params)
             local thumpable = params.thumpable
             if thumpable and thumpable:getSquare() then
                 System.instance:loadIsoObject(thumpable)
+                Containers.adopt(thumpable)
             end
         end
     end
@@ -118,14 +136,9 @@ function ObjectSystem.define(spec)
         end
     end
 
-    local function load(isoObject)
-        if spec.isObject(isoObject) then
-            System.instance:loadIsoObject(isoObject)
-        end
-    end
-    for _, name in ipairs(spec.sprites) do
-        MapObjects.OnLoadWithSprite(name, load, spec.loadPriority)
-    end
+    Tiles.onLoad(owner.feature.sprites, function(isoObject)
+        System.instance:loadIsoObject(isoObject)
+    end, { matches = owner.feature.isObject, first = true })
     Events.EveryTenMinutes.Add(updateAll)
     SGlobalObjectSystem.RegisterSystemClass(System)
     return System

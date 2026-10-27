@@ -2,9 +2,9 @@
 
 local Clock = {}
 
---- The most game hours one catch-up counts unless its caller says otherwise (Clock.hoursSince): a
---- save loaded after the clock jumped would otherwise make up days at once.
-Clock.LONGEST_PASS = 24 * 7
+-- The most game hours one catch-up counts unless its caller says otherwise: a save loaded after
+-- the clock jumped would otherwise make up days at once.
+local LONGEST_PASS = 24 * 7
 
 --- The world's clock in game hours, which elapsed time is measured on, so a pass comes out the same
 --- at any game speed or tick rate.
@@ -12,11 +12,11 @@ function Clock.now()
     return getGameTime():getWorldAgeHours()
 end
 
---- The game hours since `holder.lastHour`, at most `longest` (default Clock.LONGEST_PASS), and
---- none the first time; stamps `holder.lastHour` with now, so the next pass counts from here.
+--- The game hours since `holder.lastHour`, at most `longest` (default LONGEST_PASS), and none the
+--- first time; stamps `holder.lastHour` with now, so the next pass counts from here.
 function Clock.hoursSince(holder, longest)
     local now = Clock.now()
-    local hours = math.min(longest or Clock.LONGEST_PASS, now - (holder.lastHour or now))
+    local hours = math.min(longest or LONGEST_PASS, now - (holder.lastHour or now))
     holder.lastHour = now
     return hours
 end

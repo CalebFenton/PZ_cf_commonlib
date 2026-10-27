@@ -152,9 +152,8 @@ end
 --- Makes the job class `Action` (a JobAction) the action of every job of several features, each a
 --- job module (Jobs.define) of jobs at one kind of object or vehicle. `FEATURES[feature]`:
 --- isTarget(target), the objects or vehicles it works at; jobs, its job module, which gets
---- `action` (Action) and `feature` (the name) for the menus (JobOptions); site, if any, its side of
---- the jobs on the authority (Jobs.perform), where the shared files can give it; reach, if any,
---- its own in place of the class's REACH. A row's length is `minutes` of game time or `units`,
+--- `action` (Action) and `feature` (the name) for the menus (JobOptions); reach, if any, its own in
+--- place of the class's REACH. A row's length is `minutes` of game time or `units`,
 --- action units as vanilla times its own jobs: a number, or a function(target, with, character) of
 --- one. A `with` that is an inventory item is carried, or with the row's `inTarget` in the target's
 --- container. A row's `wield`: `with` is the tool, held in the primary hand for the whole job; its
@@ -164,8 +163,8 @@ end
 --- - jobsOf(feature), the job module of `feature`;
 --- - targetOn(feature, square), the topmost object on `square` `feature` works at, or nil: an
 ---   object standing on a floor comes before the floor, which some features work at too;
---- - serve(sites), which gives each feature `sites` names its site: the server files' way, as they
----   load after the shared ones;
+--- - serve(sites), which gives each feature `sites` names its side of the jobs on the authority
+---   (Jobs.perform): apart from FEATURES, as the server files that hold most sites load after it;
 --- - new(character, feature, job, target, with), nil for a feature or job there is none of: those
 ---   come from the client, every later step looks them up, and the server turns down a request
 ---   whose new() gives no action (NetTimedActionPacket.processServer);
@@ -181,7 +180,6 @@ function JobAction.forFeatures(Action, FEATURES)
     Action.sites = sites
     for feature, entry in pairs(FEATURES) do
         entry.jobs.action, entry.jobs.feature = Action, feature
-        sites[feature] = entry.site or sites[feature]
     end
 
     local function rowOf(feature, job)

@@ -25,10 +25,10 @@ local ObjectSystem = {}
 local Object = SGlobalObject:derive("cf_commonlib_Object")
 ObjectSystem.Object = Object
 
---- Brings the record up to now: what the game hours since it last caught up did to it, at most its
---- system's longestPass.
+--- Brings the record up to now: what the game hours since it last caught up did to it, at most
+--- Clock.hoursSince's longest pass.
 function Object:catchUp()
-    self:advance(Clock.hoursSince(self, self.luaSystem.longestPass))
+    self:advance(Clock.hoursSince(self))
 end
 
 --- Brings the record up to now, then shows and tells what changed.
@@ -108,12 +108,10 @@ end
 
 --- Defines and registers the system of `owner`'s feature (ObjectSystem.deriveSystem), whose
 --- records are `spec.Object`'s (an ObjectSystem.Object), run each ten minutes and loaded as their
---- tiles load. `spec` also takes longestPass, the most game hours one catch-up counts (default
---- Clock.LONGEST_PASS), and loadOnCreate, for System.OnCreate(params), a build menu OnCreate that
---- gives the built tile its record. Returns the class.
+--- tiles load. `spec.loadOnCreate`: System.OnCreate(params), a build menu OnCreate that gives the
+--- built tile its record. Returns the class.
 function ObjectSystem.define(owner, spec)
     local System = ObjectSystem.deriveSystem(owner, spec.Object)
-    System.longestPass = spec.longestPass or Clock.LONGEST_PASS
 
     if spec.loadOnCreate then
         -- On the authority: the build adds the tile to the square before this runs and sends it to

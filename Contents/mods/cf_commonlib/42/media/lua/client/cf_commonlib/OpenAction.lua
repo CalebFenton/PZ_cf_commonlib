@@ -1,8 +1,6 @@
 -- Opens a window at an object once the character stands at it, as vanilla's info actions do
 -- (ISGeneratorInfoAction, ISOvenUITimedAction): the walk over, then a timed action of no length.
--- This client's alone, with no complete(): opening a window is nothing the server does. And the
--- life of such a window: one of its family per player, the controller's focus while open, and
--- closed once the character walks off (OpenAction.inReach).
+-- Client only, with no complete(): opening a window is nothing the server does.
 
 require "TimedActions/ISBaseTimedAction"
 local Squares = require "cf_commonlib/Squares"

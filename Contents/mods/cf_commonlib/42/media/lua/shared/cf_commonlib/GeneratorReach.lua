@@ -1,12 +1,8 @@
--- Vanilla generators: which IsoGenerators are one, the reach the save's options give them, and
--- what mods' own machines draw from whatever powers them. Mods meet here rather than through each
--- other's globals, so each works without the other.
+-- Mods meet here rather than through each other's globals, so each works without the other.
 
 local GeneratorReach = {}
 
--- Tests of IsoGenerators that are a mod's own machine (GeneratorReach.excludeGenerators).
 local excluded = {}
--- Mods' answers of what their placed objects draw (GeneratorReach.addDraw), in the order added.
 local draws = {}
 
 --- Has `isOwn(generator)` tell IsoGenerators that are a mod's own machine, such as a battery bank

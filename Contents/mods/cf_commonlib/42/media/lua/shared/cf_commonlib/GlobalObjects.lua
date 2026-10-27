@@ -1,8 +1,3 @@
--- A feature the authority keeps in a Global Object System: who it is, which both sides' systems
--- read (server/cf_commonlib/ObjectSystem.lua and client/cf_commonlib/ClientObjects.lua, which set
--- owner.serverSystem and owner.clientSystem), and what every side reads of it: its summary, which
--- the server sends every client, and on the authority its record.
-
 local Containers = require "cf_commonlib/Containers"
 
 local GlobalObjects = {}

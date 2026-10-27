@@ -18,7 +18,7 @@
 --                                         window: known, its required skills and its inputs but
 --                                         those `except(input)` leaves out (what the job works
 --                                         on), paid as the craft pays them; it teaches the
---                                         recipe's XP. `twins`, if any, lists it and recipes that
+--                                         recipe's XP. `twins` lists it and any recipes that
 --                                         differ from it in one input only, in the order tried:
 --                                         the first the character carries every input of pays.
 -- A `labelKey` (an IG_UI key; a water material must have one) names the material in the tooltip
@@ -148,7 +148,7 @@ local function craftInputs(recipe, character, except)
     local picks, taken, needs, complete = {}, {}, {}, true
     for i = 0, inputs:size() - 1 do
         local input = inputs:get(i)
-        if not (except and except(input)) then
+        if not except(input) then
             local amount = input:getIntAmount()
             local needed = amount
             local candidates = character:getInventory():getAllEvalRecurse(function(item)
@@ -184,7 +184,7 @@ end
 -- Since they differ in that input only, it is met exactly when a twin is.
 local function craftPayment(character, material)
     local paid, byRecipe = nil, {}
-    for _, name in ipairs(material.twins or { material.craft }) do
+    for _, name in ipairs(material.twins) do
         local picks, needs = craftInputs(getScriptManager():getCraftRecipe(name), character, material.except)
         paid = paid or picks
         table.insert(byRecipe, needs)

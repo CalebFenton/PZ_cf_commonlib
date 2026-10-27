@@ -1,5 +1,3 @@
--- Vehicle parts as jobs and menus ask about them, on every side.
-
 local VehicleParts = {}
 
 --- Whether the door part `partId` of `vehicle` leaves what it covers open: the door open, taken

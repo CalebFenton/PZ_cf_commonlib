@@ -1,7 +1,5 @@
--- The right-click options of jobs of a JobAction.forFeatures class, greyed out as their job
--- module's verdict (Jobs.define) refuses them, so the menu, the action's start() and the authority
--- can't disagree; the world menu's hook for a mod's options; and the menu plumbing they share:
--- finding the clicked object, a submenu, and how a menu reads an option of vanilla's.
+-- Options greyed out by the job module's verdict (Jobs.define), so the menu, the action's start()
+-- and the authority can't disagree.
 
 require "ISUI/ISWorldObjectContextMenu"
 local Needs = require "cf_commonlib/Needs"
@@ -23,8 +21,6 @@ function JobOptions.showVerdict(option, character, Jobs, job, verdict)
     Needs.refuse(option, not option.notAvailable and verdict.withRefusal)
 end
 
--- The name of `job` of the job module `Jobs` in a menu: its row's `label`, else its action's
--- labelKey(job).
 local function jobName(Jobs, job)
     local row = Jobs.JOBS[job]
     return getText(row and row.label or Jobs.action.labelKey(job))
@@ -70,15 +66,14 @@ function JobOptions.addEach(menu, playerNum, Jobs, job, target, items, label, na
     end
 end
 
---- A finder of JobOptions.onWorldMenu: the first object on the right-clicked squares for which
---- `matches(object)` is true.
+--- A finder of JobOptions.onWorldMenu (JobOptions.findClicked).
 function JobOptions.clicked(matches)
     return function(worldobjects)
         return JobOptions.findClicked(worldobjects, matches)
     end
 end
 
---- Fills the world's right-click menu for what `find(worldobjects, character)` finds there (an
+--- Fills the world's right-click menu for what `find(worldobjects)` finds there (an
 --- object, or whatever the fill reads; JobOptions.clicked finds one by a test of it):
 --- `fill(context, playerNum, character, found, worldobjects)`. Nothing for a character in a
 --- vehicle or when it finds nothing; the game's test pass only learns there is something. Returns
@@ -87,7 +82,7 @@ function JobOptions.onWorldMenu(find, fill)
     local function onFill(playerNum, context, worldobjects, test)
         local character = getSpecificPlayer(playerNum)
         if not character or character:getVehicle() then return end
-        local found = find(worldobjects, character)
+        local found = find(worldobjects)
         if not found then return end
         if test then return ISWorldObjectContextMenu.setTest() end
         fill(context, playerNum, character, found, worldobjects)

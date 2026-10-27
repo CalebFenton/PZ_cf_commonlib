@@ -1,5 +1,3 @@
--- Places and the objects on squares, and whether a character stands where a job at one is done.
-
 local Squares = {}
 
 --- An object's square as { x, y, z }: how commands, statuses and records name a place.
@@ -73,14 +71,12 @@ function Squares.withinReach(character, target, reach)
 end
 
 --- Queues the walk of `character` to beside `square`, keeping their queue (luautils.walkAdj), and
---- there `queueThere()`, which queues what they do once there. Returns false, queueing nothing,
---- when no square beside it can be reached. Client only.
+--- there `queueThere()`, which queues what they do once there; nothing when no square beside it
+--- can be reached. Client only.
 function Squares.queueBeside(character, square, queueThere)
-    if not luautils.walkAdj(character, square, true) then
-        return false
+    if luautils.walkAdj(character, square, true) then
+        queueThere()
     end
-    queueThere()
-    return true
 end
 
 return Squares

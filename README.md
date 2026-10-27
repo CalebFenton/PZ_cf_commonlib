@@ -34,7 +34,7 @@ translation keys or commands; a mod passes those in. Every function's doc commen
 | `JobAction` | shared | the base timed action of a job at an object or vehicle, and one action class for many job modules |
 | `GlobalObjects` | shared | declaring a Global Object System feature once, and reading its summary and record from any side |
 | `RecipeLearning` | shared | recipes learned by AutoLearn skill level, build recipes included, on both sides of a server |
-| `ClientObjects` | client | a Global Object System feature's client system and its copies' local setup |
+| `ClientObjects` | client | a Global Object System feature's client system |
 | `Needs` | client | an option's tooltip: what it does, and what greys it out |
 | `JobOptions` | client | the right-click option of a job, the world menu hook, submenus and the clicked object |
 | `OpenAction` | client | walk over to an object, then open its window: one per player, closed once out of reach |

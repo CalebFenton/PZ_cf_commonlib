@@ -162,6 +162,8 @@ end
 --- predicate the first carried match of which is held. At a vehicle, the row's `area(vehicle,
 --- with)` names the vehicle area the job is done from. Gives Action:
 --- - jobsOf(feature), the job module of `feature`;
+--- - targetOn(feature, square), the topmost object on `square` `feature` works at, or nil: an
+---   object standing on a floor comes before the floor, which some features work at too;
 --- - serve(sites), which gives each feature `sites` names its site: the server files' way, as they
 ---   load after the shared ones;
 --- - new(character, feature, job, target, with), nil for a feature or job there is none of: those
@@ -189,6 +191,18 @@ function JobAction.forFeatures(Action, FEATURES)
 
     function Action.jobsOf(feature)
         return FEATURES[feature].jobs
+    end
+
+    function Action.targetOn(feature, square)
+        local isTarget = FEATURES[feature].isTarget
+        local objects = square:getObjects()
+        for i = objects:size() - 1, 0, -1 do
+            local object = objects:get(i)
+            if isTarget(object) then
+                return object
+            end
+        end
+        return nil
     end
 
     function Action.serve(served)

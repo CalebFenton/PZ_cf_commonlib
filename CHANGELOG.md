@@ -66,6 +66,8 @@ What each version changes for a mod that calls the library. Versions follow sema
   what it covers open.
 - `GeneratorReach.release(x, y, z)`: lets this side's chunks go of the squares a running generator
   there powered, for a client whose copy left before the server's switch-off reached it.
+- `JobAction.forFeatures` gives `Action.targetOn(feature, square)`: the topmost object on the
+  square the feature works at, or nil.
 
 ## 0.3.1
 

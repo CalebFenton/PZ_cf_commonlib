@@ -52,19 +52,17 @@ function GlobalObjects.declare(owner, identity)
         end
     end
 
-    -- A copy of `summary`, the system's own table, decorated with `isoObject` when the feature
-    -- decorates and the object is here.
+    -- `summary`, the system's own table, which the authority replaces only when it changes; or a
+    -- decorated copy of it, when the feature decorates and the object is here.
     local function decorated(summary, isoObject)
-        if not summary then
-            return nil
+        if not (summary and decorate and isoObject) then
+            return summary
         end
         local copy = {}
         for key, value in pairs(summary) do
             copy[key] = value
         end
-        if decorate and isoObject then
-            decorate(copy, isoObject)
-        end
+        decorate(copy, isoObject)
         return copy
     end
 

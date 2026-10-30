@@ -4,6 +4,7 @@
 
 - The library has no suite of its own; the mods that require it are the test. They are the sibling repositories whose `mod.info` requires it: `grep -ls 'require=.*cf_commonlib' ../*/Contents/mods/*/42/mod.info`. Each loads this repository through its `dev/harness.conf`'s `LIBRARY_MODS`.
 - After every change, in each of those mods: `dev/static-check.sh`, which compiles and checks the library's Lua as that mod's published code, and after a change under `Contents/`, `dev/validate-server.sh`. Then one `dev/run-debug-client.sh --test --changed` per batch in each, not after each edit. Before pushing: `dev/run-debug-client.sh --test` in each; before a release, also `--test --mp`.
+- After committing a change to `Contents/`: `dev/package.sh` in any one of those mods, which rebuilds `~/Nextcloud/ProjectZomboid/mods.zip`, every mod with its libraries and dev mods, which the user tests with. Never zip mods by hand.
 
 ## Rules
 

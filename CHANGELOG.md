@@ -3,6 +3,13 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
+## 0.5.0
+
+- `Telemetry` (new, shared): `Telemetry.channel(name)` returns `{ name, on, log }`;
+  `channel:log(key, value, ...)` prints `TELEMETRY <name> key=value ...` while the switch file
+  `Telemetry.FILE` (`cf_telemetry.txt` in the game's Lua folder) names the channel or holds `*`.
+  `Telemetry.now()` gives real milliseconds for durations.
+
 ## 0.4.0
 
 - `GlobalObjects.declare(owner, { prefix, name, isObject, sprites, decorate?, accept? })` replaces

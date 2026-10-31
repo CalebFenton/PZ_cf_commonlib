@@ -24,6 +24,7 @@ translation keys or commands; a mod passes those in. Every function's doc commen
 | `Clock` | shared | the world's hour, game hours since a record's last pass, capped; timed-action units per in-game minute and real second |
 | `Chance` | shared | chances and random picks on one roll a test can set |
 | `Tables` | shared | deep comparison of plain values |
+| `Telemetry` | shared | named channels of `TELEMETRY` lines in the console, each off until a switch file in the game's Lua folder names it |
 | `Items` | shared | taking, giving, adding, removing and dropping items so clients see it; working tools; the input a build consumed or a craft took |
 | `Tiles` | shared | what runs as a tile loads (one loader per sprite for every mod), a new entity of a tile, adding an object made in code to the world and publishing it, an object's tile (sent only when it changes), its entity's tile, its overlays |
 | `Containers` | shared | item filters on placed objects' containers, set on every side |

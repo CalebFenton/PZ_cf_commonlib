@@ -21,16 +21,17 @@ function JobOptions.showVerdict(option, character, Jobs, job, verdict)
     Needs.refuse(option, not option.notAvailable and verdict.withRefusal)
 end
 
-local function jobName(Jobs, job)
+--- The name of `job` of the job module `Jobs`: its row's `label` key, else its action's labelKey(job).
+function JobOptions.jobName(Jobs, job)
     local row = Jobs.JOBS[job]
     return getText(row and row.label or Jobs.action.labelKey(job))
 end
 
---- Adds to `menu` the option `label` (without one, the job's name: its row's `label` key, else its
---- action's labelKey(job)) that queues `job` of the job module `Jobs` (stamped by
---- JobAction.forFeatures) at `target` with `with`, greyed out as JobOptions.showVerdict says. A job
---- its target's state refuses that belongs to another state of it (hideBlocked) is left out, as is
---- one at a target this side can't read. Returns the option, or nil when left out.
+--- Adds to `menu` the option `label` (without one, JobOptions.jobName) that queues `job` of the job
+--- module `Jobs` (stamped by JobAction.forFeatures) at `target` with `with`, greyed out as
+--- JobOptions.showVerdict says. A job its target's state refuses that belongs to another state of it
+--- (hideBlocked) is left out, as is one at a target this side can't read. Returns the option, or nil
+--- when left out.
 function JobOptions.add(menu, playerNum, Jobs, job, target, with, label)
     local subject = Jobs.subjectOf(target)
     if not subject then
@@ -41,7 +42,7 @@ function JobOptions.add(menu, playerNum, Jobs, job, target, with, label)
     if verdict.hidden then
         return nil
     end
-    local option = menu:addOption(label or jobName(Jobs, job), playerNum, Jobs.action.queue, Jobs.feature, job, target,
+    local option = menu:addOption(label or JobOptions.jobName(Jobs, job), playerNum, Jobs.action.queue, Jobs.feature, job, target,
         with)
     JobOptions.showVerdict(option, character, Jobs, job, verdict)
     return option
@@ -49,9 +50,10 @@ end
 
 --- Adds `job` done with an item carried: a submenu `label` (the job's name without) with an option
 --- for each of `items`, named `nameOf(item)` (its display name without) and showing it. With none
---- carried, the job's own option without an item, which its row refuses saying what to carry.
+--- carried, the job's own option without an item, which its row refuses saying what to carry. Returns
+--- the submenu, or nil with none carried.
 function JobOptions.addEach(menu, playerNum, Jobs, job, target, items, label, nameOf)
-    label = label or jobName(Jobs, job)
+    label = label or JobOptions.jobName(Jobs, job)
     if #items == 0 then
         JobOptions.add(menu, playerNum, Jobs, job, target, nil, label)
         return
@@ -64,6 +66,7 @@ function JobOptions.addEach(menu, playerNum, Jobs, job, target, items, label, na
             option.itemForTexture = item
         end
     end
+    return submenu
 end
 
 --- A finder of JobOptions.onWorldMenu (JobOptions.findClicked).

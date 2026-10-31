@@ -3,6 +3,16 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
+## 0.6.0
+
+- `PlaceTracker` (new, shared): `PlaceTracker.new{ sprites, matches, onFound?, onLost? }` tracks the
+  places of one kind of placed tile; `tracker:add(isoObject)`, `tracker:each(fn)`.
+  `onLost(x, y, z)` runs for each place dropped.
+- `JobOptions.jobName(Jobs, job)` (new): a job's name, its row's `label` key, else its action's
+  `labelKey(job)`, as `JobOptions.add` names an option.
+- `JobOptions.addEach` returns the submenu it adds (nil with no items carried).
+- `Items.usesAt(item, fraction)` (new): the whole uses of a drainable that make `fraction` of it.
+
 ## 0.5.0
 
 - `Telemetry` (new, shared): `Telemetry.channel(name)` returns `{ name, on, log }`;

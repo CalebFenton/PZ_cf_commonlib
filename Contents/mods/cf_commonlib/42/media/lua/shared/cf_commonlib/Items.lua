@@ -10,6 +10,13 @@ function Items.notBroken(item)
     return not item:isBroken()
 end
 
+--- The whole uses of drainable `item` that make `fraction` of it. The game keeps a drainable's
+--- fill in whole uses, rounding a fill it is given to the nearest (InventoryItem.setCurrentUsesFloat),
+--- and reads it back as a float a hair off (0.1 comes back as 0.09999999), so fills compare in uses.
+function Items.usesAt(item, fraction)
+    return math.floor(fraction / item:getUseDelta() + 0.5)
+end
+
 --- A test of whether an item is of `fullType`, for what takes one (a job row's `with`,
 --- Tables.fromList).
 function Items.ofType(fullType)

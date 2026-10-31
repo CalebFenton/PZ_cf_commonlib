@@ -27,6 +27,7 @@ translation keys or commands; a mod passes those in. Every function's doc commen
 | `Telemetry` | shared | named channels of `TELEMETRY` lines in the console, each off until a switch file in the game's Lua folder names it |
 | `Items` | shared | taking, giving, adding, removing and dropping items so clients see it; working tools; the input a build consumed or a craft took |
 | `Tiles` | shared | what runs as a tile loads (one loader per sprite for every mod), a new entity of a tile, adding an object made in code to the world and publishing it, an object's tile (sent only when it changes), its entity's tile, its overlays |
+| `PlaceTracker` | shared | the places of one kind of placed tile, found as chunks load or tiles are placed, for walking each loaded one now and then |
 | `Containers` | shared | item filters on placed objects' containers, set on every side |
 | `VehicleParts` | shared | whether a vehicle's door part leaves what it covers open |
 | `GeneratorReach` | shared | which generators are vanilla's, a vanilla generator's reach as the save's options set it, and what mods' placed objects draw |

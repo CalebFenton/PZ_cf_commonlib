@@ -1,0 +1,75 @@
+-- The places of one kind of placed tile, for code that runs each loaded tile now and then.
+--
+-- MapObjects reports a tile when its chunk loads, and OnObjectAdded when one is placed (vanilla's
+-- moveables fire it in single player too). Nothing reports a chunk unloading, so a place whose
+-- tile isn't there any more is dropped while the places are walked; MapObjects reports the tile
+-- again when its chunk loads. A tile leaving its square is dropped at once.
+
+local Squares = require "cf_commonlib/Squares"
+local Tiles = require "cf_commonlib/Tiles"
+
+local PlaceTracker = {}
+PlaceTracker.__index = PlaceTracker
+
+-- World squares lie well under this in x and y, so a place key stays unique and exact in a double.
+local SPAN = 1e6
+
+-- One number per place: string keys cost far more time and memory per lookup in Kahlua.
+local function keyOf(x, y, z)
+    return (z * SPAN + y) * SPAN + x
+end
+
+local function forget(tracker, x, y, z)
+    tracker.places[keyOf(x, y, z)] = nil
+    if tracker.onLost then
+        tracker.onLost(x, y, z)
+    end
+end
+
+--- Starts tracking the tiles that `options.matches(isoObject)` accepts, which have the sprites
+--- `options.sprites`. `options.onFound(isoObject)`, if given, runs for each such tile as its chunk
+--- loads or it is placed, and `options.onLost(x, y, z)` for each place dropped.
+function PlaceTracker.new(options)
+    local self = setmetatable({
+        matches = options.matches,
+        onFound = options.onFound,
+        onLost = options.onLost,
+        places = {},
+    }, PlaceTracker)
+    Tiles.onLoad(options.sprites, function(isoObject)
+        self:add(isoObject)
+        if self.onFound then
+            self.onFound(isoObject)
+        end
+    end, { matches = options.matches, added = true })
+    Events.OnObjectAboutToBeRemoved.Add(function(isoObject)
+        if self.matches(isoObject) then
+            forget(self, isoObject:getX(), isoObject:getY(), isoObject:getZ())
+        end
+    end)
+    return self
+end
+
+--- Tracks the place of `isoObject` without calling onFound.
+function PlaceTracker:add(isoObject)
+    local x, y, z = isoObject:getX(), isoObject:getY(), isoObject:getZ()
+    local key = keyOf(x, y, z)
+    if not self.places[key] then
+        self.places[key] = { x = x, y = y, z = z }
+    end
+end
+
+--- Calls `fn` with the tile at each place whose square is loaded, and drops the others.
+function PlaceTracker:each(fn)
+    local cell = getCell()
+    for _, place in pairs(self.places) do
+        local isoObject = Squares.findObjectOn(cell:getGridSquare(place.x, place.y, place.z), self.matches)
+        if isoObject then
+            fn(isoObject)
+        else
+            forget(self, place.x, place.y, place.z)
+        end
+    end
+end
+
+return PlaceTracker

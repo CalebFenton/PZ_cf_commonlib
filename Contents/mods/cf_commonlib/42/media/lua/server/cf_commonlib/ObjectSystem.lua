@@ -12,6 +12,7 @@ require "Map/SGlobalObjectSystem"
 require "Map/SGlobalObject"
 local Clock = require "cf_commonlib/Clock"
 local Containers = require "cf_commonlib/Containers"
+local Squares = require "cf_commonlib/Squares"
 local Tables = require "cf_commonlib/Tables"
 local Tiles = require "cf_commonlib/Tiles"
 
@@ -94,6 +95,11 @@ function ObjectSystem.deriveSystem(owner, Object)
 
     function System:isValidIsoObject(isoObject)
         return feature.isObject(isoObject)
+    end
+
+    -- Vanilla's walks dropped items too (Squares.findObjectOn).
+    function System:getIsoObjectOnSquare(square)
+        return Squares.findObjectOn(square, feature.isObject)
     end
 
     -- A saved record has its lastHour; a new one's time starts now.

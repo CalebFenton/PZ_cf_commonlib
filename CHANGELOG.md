@@ -3,6 +3,18 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
+## 0.7.0
+
+- Telemetry channel `cf_commonlib.profile` (new, `!Profile.lua`): on, it times every
+  `Events.<name>.Add` handler added after the library loads, the requiring mods' and vanilla's
+  client and server ones, and logs `event=slow` (a call of 50 ms or more), `event=spike` (a frame
+  gap of 250 ms or more, with the handlers that ran in it) and `event=top` (the costliest
+  handlers every 30 s). Off, nothing is wrapped.
+- `Squares.findObjectOn` skips dropped items (`getNextNonItemObjectIndex`): it finds placed
+  tiles only, as every caller wanted, at a call per tile instead of a call per item.
+- The systems of `ObjectSystem.deriveSystem` and `ClientObjects.define` look a record's tile up
+  with `Squares.findObjectOn`, so `record:getIsoObject()` skips dropped items too.
+
 ## 0.6.0
 
 - `PlaceTracker` (new, shared): `PlaceTracker.new{ sprites, matches, onFound?, onLost? }` tracks the

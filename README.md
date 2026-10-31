@@ -24,7 +24,7 @@ translation keys or commands; a mod passes those in. Every function's doc commen
 | `Clock` | shared | the world's hour, game hours since a record's last pass, capped; timed-action units per in-game minute and real second |
 | `Chance` | shared | chances and random picks on one roll a test can set |
 | `Tables` | shared | deep comparison of plain values |
-| `Telemetry` | shared | named channels of `TELEMETRY` lines in the console, each off until a switch file in the game's Lua folder names it |
+| `Telemetry` | shared | named channels of `TELEMETRY` lines in the console, each off until a switch file in the game's Lua folder names it; the channel `cf_commonlib.profile` (`!Profile.lua`) times every event handler added after the library loads and logs slow calls, frame gaps with the handlers in them, and the costliest handlers every 30 s |
 | `Items` | shared | taking, giving, adding, removing and dropping items so clients see it; working tools; the input a build consumed or a craft took |
 | `Tiles` | shared | what runs as a tile loads (one loader per sprite for every mod), a new entity of a tile, adding an object made in code to the world and publishing it, an object's tile (sent only when it changes), its entity's tile, its overlays |
 | `PlaceTracker` | shared | the places of one kind of placed tile, found as chunks load or tiles are placed, for walking each loaded one now and then |

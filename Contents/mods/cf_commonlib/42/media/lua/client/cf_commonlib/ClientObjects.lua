@@ -3,6 +3,7 @@
 
 require "Map/CGlobalObjectSystem"
 require "Map/CGlobalObject"
+local Squares = require "cf_commonlib/Squares"
 
 local ClientObjects = {}
 
@@ -25,6 +26,11 @@ function ClientObjects.define(owner)
 
     function System:isValidIsoObject(isoObject)
         return feature.isObject(isoObject)
+    end
+
+    -- Vanilla's walks dropped items too (Squares.findObjectOn).
+    function System:getIsoObjectOnSquare(square)
+        return Squares.findObjectOn(square, feature.isObject)
     end
 
     function System:newLuaObject(globalObject)

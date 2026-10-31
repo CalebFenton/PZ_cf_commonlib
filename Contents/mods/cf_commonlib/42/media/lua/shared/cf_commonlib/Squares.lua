@@ -32,13 +32,17 @@ function Squares.eachAround(x, y, z, radius, fn)
 end
 
 --- The first object on `square` for which `matches(object)` is true, or nil. Takes a nil square.
+--- Dropped items aren't looked at: a pile of them would cost a call each, and no tile is one.
 function Squares.findObjectOn(square, matches)
-    local objects = square and square:getObjects()
-    for i = 0, (objects and objects:size() or 0) - 1 do
+    if not square then return nil end
+    local objects = square:getObjects()
+    local i = square:getNextNonItemObjectIndex(0)
+    while i ~= -1 do
         local object = objects:get(i)
         if matches(object) then
             return object
         end
+        i = square:getNextNonItemObjectIndex(i + 1)
     end
     return nil
 end

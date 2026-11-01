@@ -3,6 +3,15 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
+## 0.8.0
+
+- `ObjectSystem.Object:carryOn(item)` (new): puts the record, brought up to now, on the item its
+  tile is being picked up as, every saved field but `lastHour`. `Object:takeCarried(isoObject)`
+  (new), for a class's `stateFromIsoObject`: takes it into the new record of the tile that item
+  is put down as, its time starting then, and returns whether it did. Placing a moveable copies
+  the item's modData onto the tile before the system loads it, so a mod calls `carryOn` from its
+  pick-up and `takeCarried` first thing in `stateFromIsoObject`.
+
 ## 0.7.0
 
 - Telemetry channel `cf_commonlib.profile` (new, `!Profile.lua`): on, it times every

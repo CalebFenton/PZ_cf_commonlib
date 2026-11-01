@@ -53,6 +53,45 @@ function Object:sendSummary()
     end
 end
 
+-- The modData key under which a record rides on the item its tile is picked up as. Placing the
+-- item copies its modData onto the tile it puts down (ISMoveableSpriteProps.placeMoveableInternal)
+-- before the square announces the tile, so the record is there when the system loads it.
+local CARRIED_KEY = "cf_commonlib_record"
+
+--- Puts the record, brought up to now, on `item`, the item its tile is being picked up as: its
+--- saved fields but lastHour, so no time passes for it while it is carried.
+--- Object:takeCarried gives it back to the tile the item puts down.
+function Object:carryOn(item)
+    self:catchUp()
+    local carried = {}
+    for _, key in ipairs(self.SAVED_FIELDS) do
+        local value = self[key]
+        if key ~= "lastHour" and value ~= nil then
+            carried[key] = type(value) == "table" and copyTable(value) or value
+        end
+    end
+    item:getModData()[CARRIED_KEY] = carried
+end
+
+--- For a class's stateFromIsoObject: takes the record `isoObject` brought from the item it was
+--- put down from (Object:carryOn) into this new record, its time starting now. Returns whether
+--- it brought one; without, the record is a new object's.
+function Object:takeCarried(isoObject)
+    local data = isoObject:hasModData() and isoObject:getModData()
+    local carried = data and data[CARRIED_KEY]
+    if type(carried) ~= "table" then
+        return false
+    end
+    data[CARRIED_KEY] = nil
+    for _, key in ipairs(self.SAVED_FIELDS) do
+        if key ~= "lastHour" and carried[key] ~= nil then
+            self[key] = carried[key]
+        end
+    end
+    self.lastHour = Clock.now()
+    return true
+end
+
 local function listed(list, value)
     for _, entry in ipairs(list) do
         if entry == value then

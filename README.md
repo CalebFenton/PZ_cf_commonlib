@@ -40,7 +40,7 @@ translation keys or commands; a mod passes those in. Every function's doc commen
 | `Needs` | client | an option's tooltip: what it does, and what greys it out |
 | `JobOptions` | client | the right-click option of a job, the world menu hook, submenus and the clicked object |
 | `OpenAction` | client | walk over to an object, then open its window: one per player, closed once out of reach |
-| `ObjectSystem` | server | a Global Object System feature's server system, record base and job site |
+| `ObjectSystem` | server | a Global Object System feature's server system, record base and job site; records that go with their tile when it is picked up |
 | `Loot` | server | a mod's items in the loot lists, scaled by its options, replaced rather than piled up |
 
 A save keeps a Global Object System by its name and each record by its saved fields, so the

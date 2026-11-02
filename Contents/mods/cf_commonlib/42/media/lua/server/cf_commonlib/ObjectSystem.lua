@@ -26,6 +26,24 @@ local ObjectSystem = {}
 local Object = SGlobalObject:derive("cf_commonlib_Object")
 ObjectSystem.Object = Object
 
+-- The hooks every class defines, declared here so a class that lacks one fails naming it, and so
+-- a mod that requires the library without an object system still finds every method it calls.
+local function missingHook(self, name)
+    error(tostring(self.Type) .. " defines no " .. name .. "()")
+end
+
+function Object:advance(hours)
+    missingHook(self, "advance")
+end
+
+function Object:afterChange()
+    missingHook(self, "afterChange")
+end
+
+function Object:buildSummary()
+    missingHook(self, "buildSummary")
+end
+
 --- Brings the record up to now: what the game hours since it last caught up did to it, at most
 --- Clock.hoursSince's longest pass.
 function Object:catchUp()

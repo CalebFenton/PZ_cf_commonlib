@@ -3,6 +3,12 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
+## 0.8.1
+
+- `ObjectSystem.Object` declares `advance`, `afterChange` and `buildSummary`, each failing with
+  the class's name until the class defines it, as a call to the undefined method failed before.
+  A mod that requires the library without an object system of its own passes the static check.
+
 ## 0.8.0
 
 - `ObjectSystem.Object:carryOn(item)` (new): puts the record, brought up to now, on the item its

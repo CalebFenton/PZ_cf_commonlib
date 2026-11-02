@@ -1,8 +1,9 @@
 # cf_commonlib
 
 Shared code for Caleb Fenton's Project Zomboid Build 42 mods,
-[Renewable Energy](https://github.com/CalebFenton/PZ_RenewableEnergy) and
-[Enhanced Irrigation](https://github.com/CalebFenton/PZ_EnhancedIrrigation).
+[Renewable Energy](https://github.com/CalebFenton/PZ_RenewableEnergy),
+[Enhanced Irrigation](https://github.com/CalebFenton/PZ_EnhancedIrrigation) and
+[Hearing Aid](https://github.com/CalebFenton/PZ_HearingAid).
 
 ## For players
 

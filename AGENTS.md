@@ -10,7 +10,7 @@
 
 - The library names no mod: no item, sprite, tile, sandbox option, translation key, command module or class-name prefix of a mod appears in it. Whatever is a mod's comes in as a parameter, and a translation key a function shows is the caller's.
 - Each module returns its table and defines no globals. A name the game looks up as a global (a timed action's class, an OnAddToMenu hook) is the calling mod's, declared there.
-- A change to a function's signature or behaviour migrates every mod that requires the library in the same change, with every caller: shipped code, dev mod, tests. No aliases or shims for the old shape; the version says it breaks.
+- A change to a function's signature or behaviour migrates every mod that requires the library in the same change, with every caller: shipped code, dev mod, tests. No aliases or shims for the old shape; its changelog entry, and the next release's version, say it breaks.
 - Saves keep a Global Object System by its system and class names and each record by its saved fields, which the library takes from the mod. Never change how it derives a name the mods pass in: their players' saves would lose those objects.
 - Check Build 42 APIs against the installed game's Lua, scripts and decompiled Java (`../RenewableEnergy/DEVELOPMENT.md` has the command), not web docs or memory.
 - Comments say why, without repeating values from the code.
@@ -18,12 +18,13 @@
 
 ## Versions
 
-A player's Steam runs whatever version of the library it last downloaded under every mod that requires it, so the version, MAJOR.MINOR.PATCH, tells those mods what an update may break.
+A player's Steam runs whatever version of the library it last downloaded under every mod that requires it, so the version, MAJOR.MINOR.PATCH, tells those mods what an update may break. Only an upload to the Workshop, a release, reaches players, so only a release gets a version.
 
-- Every change under `Contents/` gets the next version in the same commit: `modversion` in `Contents/mods/cf_commonlib/42/mod.info`, and an entry at the top of `CHANGELOG.md` saying what changed for a mod calling the library. Tag the commit `v<version>`.
-- MAJOR: a mod written against the previous version can break: a module, function, field or parameter removed or renamed, a parameter newly required, a return value or behaviour a caller relies on changed, or a name a save keeps derived differently. Before the first Workshop release, 1.0.0, such a change raises MINOR instead.
-- MINOR: something added that old callers don't notice: a module, a function, an optional parameter, a field in a returned table.
-- PATCH: a fix that leaves every documented contract as it was.
+- A change under `Contents/` adds an entry under `## Unreleased` at the top of `CHANGELOG.md`, starting that heading if it is missing, saying what changed for a mod calling the library. It leaves `modversion` and the tags alone.
+- A release turns `## Unreleased` into its version's heading, sets `modversion` in `Contents/mods/cf_commonlib/42/mod.info` to that version, and tags the commit `v<version>`. The first release is 1.0.0; each later one raises the part for the largest change under Unreleased:
+  - MAJOR: a mod written against the previous version can break: a module, function, field or parameter removed or renamed, a parameter newly required, a return value or behaviour a caller relies on changed, or a name a save keeps derived differently.
+  - MINOR: something added that old callers don't notice: a module, a function, an optional parameter, a field in a returned table.
+  - PATCH: a fix that leaves every documented contract as it was.
 - Upload a version a mod needs to the Workshop before that mod's update. After a MAJOR version, upload every mod that requires the library with it, since each player's Steam updates them all at once.
 
 ## STOP

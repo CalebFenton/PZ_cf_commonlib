@@ -1,7 +1,8 @@
 # Changelog
 
-What each version changes for a mod that calls the library. Versions follow semantic versioning
-(`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
+What each version changes for a mod that calls the library, newest first; `## Unreleased`, when
+present, holds what changed since the last release. Versions follow semantic versioning
+(`AGENTS.md`, Versions).
 
 ## 0.9.0
 

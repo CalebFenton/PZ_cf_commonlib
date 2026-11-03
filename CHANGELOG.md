@@ -3,6 +3,12 @@
 What each version changes for a mod that calls the library. Versions follow semantic versioning
 (`AGENTS.md`, Versions); until 1.0.0, a breaking change raises the minor version.
 
+## 0.9.0
+
+- A water material takes an optional `tainted = true`: tainted water in a carried container then
+  counts towards it and is poured out with the clean, as the game's own includeTainted water
+  query takes it. Without it a water material counts clean and carbonated water only, as before.
+
 ## 0.8.1
 
 - `ObjectSystem.Object` declares `advance`, `afterChange` and `buildSummary`, each failing with

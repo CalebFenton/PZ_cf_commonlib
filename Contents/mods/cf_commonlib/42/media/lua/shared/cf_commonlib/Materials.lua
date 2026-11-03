@@ -8,7 +8,9 @@
 --   { tool = "TAG", item = fullType }     a working tool with the ItemTag, `item` naming it in the
 --                                         tooltip; `useOne` takes one use of it, as a match
 --   { tag = "TAG", item = fullType }      an unbroken item with the ItemTag, taken
---   { water = litres }                    water in any carried container, poured out
+--   { water = litres, tainted }           water in any carried container, poured out; clean or
+--                                         carbonated water only, unless `tainted` lets tainted
+--                                         water count too, for a job nobody drinks from
 --   { uses = n, item | types | tags }     n uses of unbroken drainables of the type `item`, of any
 --                                         of the full types `types` or with any of the ItemTags
 --                                         `tags`, drawn fullest first, as a joint takes glue
@@ -66,14 +68,16 @@ local function isBag(item)
     return instanceof(item, "InventoryContainer")
 end
 
--- Keep the game's clean/carbonated-water policy, but include every carried bag: the native
--- water-source query, unlike the other material queries, doesn't recurse.
-local function waterSources(character, ordered)
+-- The game's water policy, clean and carbonated water and tainted too when the material says so,
+-- but over every carried bag: the native water-source query, unlike the other material queries,
+-- doesn't recurse.
+local function waterSources(character, material, ordered)
     local inventory = character:getInventory()
-    local list = Tables.fromList(inventory:getAllWaterFluidSources(false))
+    local tainted = material.tainted == true
+    local list = Tables.fromList(inventory:getAllWaterFluidSources(tainted))
     local bags = inventory:getAllEvalRecurse(isBag)
     for i = 0, bags:size() - 1 do
-        Tables.fromList(bags:get(i):getInventory():getAllWaterFluidSources(false), nil, list)
+        Tables.fromList(bags:get(i):getInventory():getAllWaterFluidSources(tainted), nil, list)
     end
     if ordered then
         table.sort(list, function(a, b)
@@ -114,7 +118,7 @@ local function haveOf(character, material)
         return inventory:getCountTagEvalRecurse(ItemTag[material.tag], Items.notBroken)
     elseif material.water or material.uses then
         local have = 0
-        local sources = material.water and waterSources(character) or drainablesOf(character, material)
+        local sources = material.water and waterSources(character, material) or drainablesOf(character, material)
         for _, item in ipairs(sources) do
             have = have + (material.water and item:getFluidContainer():getAmount() or item:getCurrentUses())
         end
@@ -300,9 +304,9 @@ function Materials.conditions(character, list)
     return conditions
 end
 
-local function pourWater(character, litres)
-    local left = litres
-    for _, item in ipairs(waterSources(character, true)) do
+local function pourWater(character, material)
+    local left = material.water
+    for _, item in ipairs(waterSources(character, material, true)) do
         local fluid = item:getFluidContainer()
         local take = math.min(left, fluid:getAmount())
         if take > 0 then
@@ -337,7 +341,7 @@ function Materials.consume(character, list)
         if material.craft then
             payCraft(character, material)
         elseif material.water then
-            pourWater(character, material.water)
+            pourWater(character, material)
         elseif material.tool then
             local tool = material.useOne and Items.workingTool(character, ItemTag[material.tool])
             if tool and instanceof(tool, "DrainableComboItem") then

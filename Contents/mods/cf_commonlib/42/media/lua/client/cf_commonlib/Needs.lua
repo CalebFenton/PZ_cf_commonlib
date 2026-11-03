@@ -36,21 +36,10 @@ local function counted(need)
     return colourOf(need) .. nameOf(need) .. " " .. need.have .. "/" .. need.need
 end
 
--- One need's line; a recipe gets vanilla's recipe line, which has no count, and a need any of
--- several meets (`anyOf`) gets theirs in a row, each in its own colour, joined by the crafting
--- window's "or" (ISWidgetTitleHeader). Rich text drops the space before a tag and starts the next
--- words where the last ones end (ISRichTextPanel.paginate), so each colour change mid-line comes
--- after a <SPACE> tag, which keeps the gap.
+-- One need's line; a recipe gets vanilla's recipe line, which has no count.
 local function line(need)
     if need.recipe then
         return " " .. colourOf(need) .. " " .. getText("Tooltip_vehicle_requireRecipe", need.recipe:getTranslationName()) .. " <LINE>"
-    end
-    if need.anyOf then
-        local options = {}
-        for _, option in ipairs(need.anyOf) do
-            table.insert(options, counted(option))
-        end
-        return " " .. table.concat(options, " <SPACE> " .. colourOf(need) .. getText("IGUI_CraftingWindow_Or") .. " <SPACE> ") .. " <LINE>"
     end
     return " " .. counted(need) .. " <LINE>"
 end

@@ -16,20 +16,18 @@
 --                                         `tags`, drawn fullest first, as a joint takes glue
 --   { item = fullType, need = n }         items of a type, taken; `types` lets any of several
 --                                         types count; `keep` needs them but takes nothing
---   { craft = name, twins, except }       a craftRecipe done in place rather than in the crafting
+--   { craft = name, except }              a craftRecipe done in place rather than in the crafting
 --                                         window: known, its required skills and its inputs but
 --                                         those `except(input)` leaves out (what the job works
 --                                         on), paid as the craft pays them; it teaches the
---                                         recipe's XP. `twins` lists it and any recipes that
---                                         differ from it in one input only, in the order tried:
---                                         the first the character carries every input of pays.
+--                                         recipe's XP
 -- A `labelKey` (an IG_UI key; a water material must have one) names the material in the tooltip
 -- in place of its item, and several `types` are named together when it has none.
 --
 -- Each need is { kind, have, need } with what names it: kind "skill" with `perk`, "recipe" with
 -- `recipe` (the CraftRecipe; have 1 when known), "tool" with `tool` and `item`, "water", or "item"
--- with `item`, or a craft's `input` (an InputScript) or `anyOf` (its twins' needs for the input
--- they differ in, one of which suffices); and `label` or `labelKey` where the material gives one.
+-- with `item`, or a craft's `input` (an InputScript); and `label` or `labelKey` where the material
+-- gives one.
 
 local Items = require "cf_commonlib/Items"
 local Tables = require "cf_commonlib/Tables"
@@ -182,29 +180,10 @@ local function craftInputs(recipe, character, except)
     return complete and picks or nil, needs
 end
 
--- What the craft material `material` takes of the character's inventory: the items of the first
--- twin the character carries every input of, each { item, uses, keep, wear } (nil when none is
--- paid), and the inputs as needs, an input the twins differ in being one need any of theirs meets.
--- Since they differ in that input only, it is met exactly when a twin is.
+-- What the craft material `material` takes of the character's inventory: the items that pay its
+-- inputs, each { item, uses, keep, wear } (nil when one is missing), and its inputs as needs.
 local function craftPayment(character, material)
-    local paid, byRecipe = nil, {}
-    for _, name in ipairs(material.twins) do
-        local picks, needs = craftInputs(getScriptManager():getCraftRecipe(name), character, material.except)
-        paid = paid or picks
-        table.insert(byRecipe, needs)
-    end
-    local needs = {}
-    for i, need in ipairs(byRecipe[1]) do
-        local options, met, same = {}, false, true
-        for _, recipeNeeds in ipairs(byRecipe) do
-            local option = recipeNeeds[i]
-            table.insert(options, option)
-            met = met or option.have >= option.need
-            same = same and option.input:getOriginalLine() == need.input:getOriginalLine()
-        end
-        table.insert(needs, same and need or { kind = "item", anyOf = options, have = met and 1 or 0, need = 1 })
-    end
-    return paid, needs
+    return craftInputs(getScriptManager():getCraftRecipe(material.craft), character, material.except)
 end
 
 -- The craft material's needs onto `needs`: the recipe known, its skills, its inputs.

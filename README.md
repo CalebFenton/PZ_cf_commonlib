@@ -1,4 +1,4 @@
-# cf_commonlib
+# ![cf_commonlib](Contents/mods/cf_commonlib/42/poster.png)
 
 Shared code for Caleb Fenton's Project Zomboid Build 42 mods,
 [Renewable Energy](https://github.com/CalebFenton/PZ_RenewableEnergy),

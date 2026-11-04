@@ -16,6 +16,15 @@ function Squares.isPosition(position)
         and type(position.z) == "number"
 end
 
+-- World squares lie well under this in x and y, so a place key stays unique and exact in a double.
+local SPAN = 1e6
+
+--- The place x, y, z as one number, to key tables by place: string keys cost far more time and
+--- memory per lookup in Kahlua.
+function Squares.placeKey(x, y, z)
+    return (z * SPAN + y) * SPAN + x
+end
+
 --- Calls `fn(square)` for every loaded square on level `z` within `radius` squares of x, y on each
 --- axis, x, y included, until one call returns a value other than nil, which this returns.
 function Squares.eachAround(x, y, z, radius, fn)

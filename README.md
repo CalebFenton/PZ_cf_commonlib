@@ -21,7 +21,7 @@ translation keys or commands; a mod passes those in. Every function's doc commen
 
 | Module | Side | What it does |
 |---|---|---|
-| `Squares` | shared | places as { x, y, z }, the loaded squares around one, the first matching object on a square, whether an object is still in the world, whether a character stands within reach of a target (vehicles too), the walk beside a square before what is done there |
+| `Squares` | shared | places as { x, y, z } and as one number to key tables by, the loaded squares around one, the first matching object on a square, whether an object is still in the world, whether a character stands within reach of a target (vehicles too), the walk beside a square before what is done there |
 | `Clock` | shared | the world's hour, game hours since a record's last pass, capped; timed-action units per in-game minute and real second |
 | `Chance` | shared | chances and random picks on one roll a test can set |
 | `Tables` | shared | deep comparison of plain values |

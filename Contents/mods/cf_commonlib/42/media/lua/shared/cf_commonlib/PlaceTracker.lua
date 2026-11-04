@@ -11,16 +11,8 @@ local Tiles = require "cf_commonlib/Tiles"
 local PlaceTracker = {}
 PlaceTracker.__index = PlaceTracker
 
--- World squares lie well under this in x and y, so a place key stays unique and exact in a double.
-local SPAN = 1e6
-
--- One number per place: string keys cost far more time and memory per lookup in Kahlua.
-local function keyOf(x, y, z)
-    return (z * SPAN + y) * SPAN + x
-end
-
 local function forget(tracker, x, y, z)
-    tracker.places[keyOf(x, y, z)] = nil
+    tracker.places[Squares.placeKey(x, y, z)] = nil
     if tracker.onLost then
         tracker.onLost(x, y, z)
     end
@@ -53,7 +45,7 @@ end
 --- Tracks the place of `isoObject` without calling onFound.
 function PlaceTracker:add(isoObject)
     local x, y, z = isoObject:getX(), isoObject:getY(), isoObject:getZ()
-    local key = keyOf(x, y, z)
+    local key = Squares.placeKey(x, y, z)
     if not self.places[key] then
         self.places[key] = { x = x, y = y, z = z }
     end

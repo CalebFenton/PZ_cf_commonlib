@@ -1,5 +1,6 @@
--- Teaching mods' recipes by skill level (their AutoLearnAny and AutoLearnAll). Shared: vanilla's
--- own AutoLearn check runs wherever LevelPerk fires (XpUpdate.lua, which every side loads).
+-- Teaching mods' recipes by skill level (their AutoLearnAny and AutoLearnAll), and by the
+-- literature a character has read. Shared: vanilla's own AutoLearn check runs wherever LevelPerk
+-- fires (XpUpdate.lua, which every side loads).
 --
 -- Vanilla's check (ScriptManager.checkAutoLearn) walks only the craftRecipe scripts, and an
 -- entity's build recipe is not one of them (CraftRecipeComponentScript.load builds it apart), so
@@ -7,12 +8,22 @@
 -- that a level up on a multiplayer server that teaches one reaches the client whichever LevelPerk
 -- hook runs first. Every mod that registers shares one set of hooks and one catch-up command, so
 -- a level up sends the known recipes once however many mods learn by it.
+--
+-- Vanilla teaches a magazine's LearnedRecipes on the first read only: ISReadABook:complete skips
+-- ReadLiterature for a title the character has read, and a magazine's title is its full type
+-- (ItemCodeOnCreate.onCreateRecipeMagazine). A recipe a mod adds to a magazine's list after a
+-- character read it would never reach that character, so the catch-up teaches what each read
+-- magazine lists now.
 
 local RecipeLearning = {}
 
 -- The recipes with an AutoLearn skill of every registered prefix, and the perks those skills name,
 -- by perk id.
 local AUTO_LEARN, AUTO_LEARN_PERKS, PREFIXES = {}, {}, {}
+
+-- The recipes of every registered prefix that each item teaches when read (its script's
+-- LearnedRecipes), by the item's full type.
+local READ_TEACHES = {}
 
 -- The packet field of sendSyncPlayerFields that sends the known recipes (SyncPlayerFieldsPacket).
 local SYNC_RECIPES = 1
@@ -30,8 +41,9 @@ local function notePerks(recipe)
 end
 
 --- Has the craftRecipes and build recipes whose names start with `prefix` learned by their
---- AutoLearn skills. Read from the scripts, which each side loads before its Lua, so a mod calls
---- this as its file loads. A prefix registered again adds nothing.
+--- AutoLearn skills, and by any literature listing them that the character has read. Read from the
+--- scripts, which each side loads before its Lua, so a mod calls this as its file loads. A prefix
+--- registered again adds nothing.
 function RecipeLearning.register(prefix)
     if PREFIXES[prefix] then return end
     PREFIXES[prefix] = true
@@ -46,6 +58,19 @@ function RecipeLearning.register(prefix)
             end
         end
     end
+    local items = scripts:getAllItems()
+    for i = 0, items:size() - 1 do
+        local item = items:get(i)
+        local learned = item:getLearnedRecipes()
+        for j = 0, (learned and learned:size() or 0) - 1 do
+            local name = learned:get(j)
+            if name:sub(1, #prefix) == prefix then
+                local fullType = item:getFullName()
+                READ_TEACHES[fullType] = READ_TEACHES[fullType] or {}
+                table.insert(READ_TEACHES[fullType], name)
+            end
+        end
+    end
 end
 
 -- Teaches `character` each registered recipe whose AutoLearn skills it has, through the recipe's
@@ -55,6 +80,24 @@ local function autoLearn(character)
         recipe:checkAutoLearnAnySkills(character)
         recipe:checkAutoLearnAllSkills(character)
     end
+end
+
+-- Teaches `character` every registered recipe that literature it has read lists, by vanilla's two
+-- records of a read: the items whose recipes it read (ISReadABook:complete) and the titles it read.
+-- Returns whether it taught any.
+local function readLearn(character)
+    local taught, known, read = false, character:getKnownRecipes(), character:getAlreadyReadBook()
+    for fullType, names in pairs(READ_TEACHES) do
+        if read:contains(fullType) or character:isLiteratureRead(fullType) then
+            for _, name in ipairs(names) do
+                if not known:contains(name) then
+                    character:learnRecipe(name)
+                    taught = true
+                end
+            end
+        end
+    end
+    return taught
 end
 
 -- By the CraftRecipe, so a recipe known through its MetaRecipe counts.
@@ -68,16 +111,18 @@ local function knownCount(character)
     return count
 end
 
---- Teaches `character` what its levels already earn, and on a multiplayer server sends its client
---- what that changed. A server runs no check of its own when a player joins (IsoWorld.init checks
---- the local player only, and no event marks a join on the server), so a character who earned a
---- recipe before a mod was added, or before this check existed, would otherwise know it only on
---- its client, and the server would refuse the build. The client asks for this as it enters the
---- world; the server judges by its own copy's levels.
+--- Teaches `character` what its levels and the literature it has read already earn, and on a
+--- multiplayer server sends its client what that changed. A server runs no check of its own when a
+--- player joins (IsoWorld.init checks the local player only, and no event marks a join on the
+--- server), so a character who earned a recipe before a mod was added, or before this check
+--- existed, or read a magazine before a mod added a recipe to it, would otherwise know it only on
+--- its client, or not at all, and the server would refuse the build. The client asks for this as it
+--- enters the world; the server judges by its own copy's levels and reads.
 function RecipeLearning.catchUp(character)
     local before = knownCount(character)
     autoLearn(character)
-    if isServer() and knownCount(character) ~= before then
+    local taught = readLearn(character)
+    if isServer() and (taught or knownCount(character) ~= before) then
         sendSyncPlayerFields(character, SYNC_RECIPES)
     end
 end
@@ -101,6 +146,7 @@ end)
 Events.OnCreatePlayer.Add(function(playerNum)
     local character = getSpecificPlayer(playerNum)
     autoLearn(character)
+    readLearn(character)
     if isClient() then
         sendClientCommand(character, RecipeLearning.COMMAND_MODULE, RecipeLearning.CATCH_UP, {})
     end

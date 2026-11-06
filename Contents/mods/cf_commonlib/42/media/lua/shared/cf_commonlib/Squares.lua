@@ -65,6 +65,13 @@ function Squares.onSquare(object)
     return object ~= nil and object:getObjectIndex() ~= -1
 end
 
+--- Whether the power grid powers `square`, as the engine decides (IsoGridSquare.hasGridPower).
+--- A mod may replace the Lua-visible `square:hasGridPower()` to answer true for squares its own
+--- generators power, so asking that can't tell the grid from them.
+function Squares.hasGridPower(square)
+    return not square:isNoPower() and getSandboxOptions():doesPowerGridExist()
+end
+
 --- Whether `character` stands within `reach` squares on each axis of the middle of `target`'s
 --- square, on its level: where a menu walks them for a job (luautils.walkAdj), with room for drift
 --- and client lag. A vehicle `target` adds half its longest side, as the menu walks to one of its

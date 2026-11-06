@@ -6,5 +6,5 @@ present, holds what changed since the last release. Versions follow semantic ver
 
 ## 1.0.0
 
-- The first release: the code Renewable Energy, Enhanced Irrigation and Hearing Aid share. The
+- The first release: the code Renewable Energy and Enhanced Irrigation share. The
   README's module table says what each module does; each function's doc comment is its contract.
